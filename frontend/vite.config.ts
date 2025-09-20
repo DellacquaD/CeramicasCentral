@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
     plugins: [vue()],
-    base: '/CeramicasCentral/', // ¡Exactamente como aparece en GitHub!
+    base: '/CeramicasCentral/', //
     build: {
         outDir: 'dist'
     }
