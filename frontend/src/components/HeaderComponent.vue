@@ -6,28 +6,27 @@
         <div class="flex items-center">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm">
-<!--              <span class="text-white font-bold text-lg">CC</span>-->
-              <img src="../assets/Icono.png" alt="logo" />
+              <img src="../assets/icono.png" alt="">
             </div>
             <div class="flex flex-col">
-              <span class="text-2xl font-bold text-gray-900 dark:text-white">Central</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ceramicas</span>
+              <span class="text-2xl font-bold text-gray-900 dark:text-white">Cerámicas</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Central</span>
             </div>
           </div>
         </div>
 
         <!-- Navigation -->
         <nav class="flex items-center space-x-8">
-          <a
+          <router-link
               v-for="item in navigationItems"
               :key="item.name"
-              href="#"
-              @click.prevent="$emit('navigate', item.path)"
+              :to="item.path"
               class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-lg transition-colors duration-200 relative group"
+              active-class="text-blue-600 dark:text-blue-400"
           >
             {{ item.name }}
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
-          </a>
+          </router-link>
         </nav>
 
         <!-- Right side actions -->
