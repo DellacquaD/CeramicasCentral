@@ -105,7 +105,7 @@ const routes = [
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory('/CeramicasCentral/'), // Configurar la base URL
     routes,
     // Scroll behavior para mejorar UX
     scrollBehavior(to, from, savedPosition) {
