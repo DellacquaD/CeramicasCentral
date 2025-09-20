@@ -1,5 +1,5 @@
 <template>
-  <section class="max-w-7xl mx-auto px-8 py-16">
+  <section class="max-w-screen-2xl mx-auto py-16">
     <!-- Section header -->
     <div class="text-center mb-16">
       <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -145,7 +145,7 @@ const categories = ref([
 const statistics = ref([
   { value: '1000+', label: 'Productos' },
   { value: '50+', label: 'Marcas' },
-  { value: '15+', label: 'Años experiencia' },
+  { value: '15+', label: 'Años en el rubro' },
   { value: '5000+', label: 'Clientes satisfechos' }
 ])
 

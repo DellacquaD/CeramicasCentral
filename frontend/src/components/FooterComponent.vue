@@ -7,11 +7,11 @@
         <div class="lg:col-span-2">
           <div class="flex items-center space-x-3 mb-6">
             <div class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-lg">
-              <span class="text-white font-bold text-xl">P</span>
+              <img src="../assets/icono.png">
             </div>
             <div>
-              <span class="text-2xl font-bold">Products</span>
-              <div class="text-gray-400 text-sm uppercase tracking-wide">Construcción</div>
+              <span class="text-2xl font-bold">Cerámicas</span>
+              <div class="text-gray-400 text-sm uppercase tracking-wide">Central</div>
             </div>
           </div>
 
