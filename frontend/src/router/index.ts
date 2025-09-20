@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 
 // Import views/pages
 import Home from '../views/Home.vue'
@@ -10,13 +11,13 @@ import Contact from '../views/Contact.vue'
 import Cart from '../views/Cart.vue'
 import Offers from '../views/Offers.vue'
 
-const routes = [
+const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'Home',
         component: Home,
         meta: {
-            title: 'Inicio - Products'
+            title: 'Inicio - CerámicasCentral'
         }
     },
     {
@@ -24,7 +25,7 @@ const routes = [
         name: 'Categories',
         component: Categories,
         meta: {
-            title: 'Categorías - Products'
+            title: 'Categorías - CerámicasCentral'
         }
     },
     {
@@ -33,7 +34,7 @@ const routes = [
         component: Products,
         props: true,
         meta: {
-            title: 'Productos - Products'
+            title: 'Productos - CerámicasCentral'
         }
     },
     {
@@ -41,7 +42,7 @@ const routes = [
         name: 'Products',
         component: Products,
         meta: {
-            title: 'Todos los Productos - Products'
+            title: 'Todos los Productos - CerámicasCentral'
         }
     },
     {
@@ -50,7 +51,7 @@ const routes = [
         component: ProductDetail,
         props: true,
         meta: {
-            title: 'Producto - Products'
+            title: 'Producto - CerámicasCentral'
         }
     },
     {
@@ -58,7 +59,7 @@ const routes = [
         name: 'Offers',
         component: Offers,
         meta: {
-            title: 'Ofertas - Products'
+            title: 'Ofertas - CerámicasCentral'
         }
     },
     {
@@ -66,7 +67,7 @@ const routes = [
         name: 'Cart',
         component: Cart,
         meta: {
-            title: 'Carrito - Products'
+            title: 'Carrito - CerámicasCentral'
         }
     },
     {
@@ -74,7 +75,7 @@ const routes = [
         name: 'About',
         component: About,
         meta: {
-            title: 'Nosotros - Products'
+            title: 'Nosotros - CerámicasCentral'
         }
     },
     {
@@ -82,7 +83,7 @@ const routes = [
         name: 'Contact',
         component: Contact,
         meta: {
-            title: 'Contacto - Products'
+            title: 'Contacto - CerámicasCentral'
         }
     },
     {
@@ -90,7 +91,7 @@ const routes = [
         name: 'Search',
         component: () => import('../views/Search.vue'), // Lazy loading
         meta: {
-            title: 'Buscar - Products'
+            title: 'Buscar - CerámicasCentral'
         }
     },
     // Redirect para URLs no encontradas
@@ -99,16 +100,16 @@ const routes = [
         name: 'NotFound',
         component: () => import('../views/NotFound.vue'),
         meta: {
-            title: 'Página no encontrada - Products'
+            title: 'Página no encontrada - CerámicasCentral'
         }
     }
 ]
 
 const router = createRouter({
-    history: createWebHistory('/CeramicasCentral/'), // Configurar la base URL
+    history: createWebHistory('/CeramicasCentral/'),
     routes,
     // Scroll behavior para mejorar UX
-    scrollBehavior(to, from, savedPosition) {
+    scrollBehavior(to, _from, savedPosition) {
         if (savedPosition) {
             return savedPosition
         } else if (to.hash) {
@@ -123,8 +124,8 @@ const router = createRouter({
 })
 
 // Guard para actualizar el título de la página
-router.beforeEach((to, from, next) => {
-    document.title = to.meta.title || 'Products - Construcción'
+router.beforeEach((to, _from, next) => {
+    document.title = (to.meta?.title as string) || 'CerámicasCentral - Construcción'
     next()
 })
 
