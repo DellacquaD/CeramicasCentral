@@ -84,7 +84,7 @@
             <p class="text-gray-300">Suscríbete a nuestro newsletter y mantente informado sobre nuestros productos y promociones.</p>
           </div>
 
-          <div class="flex space-x-3">
+          <div class="flex flex-col md:flex-row md:space-x-3 space-y-3 md:space-y-0">
             <input
                 v-model="newsletterEmail"
                 type="email"
@@ -94,7 +94,7 @@
             <button
                 @click="subscribeNewsletter"
                 :disabled="!newsletterEmail"
-                class="px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-xl transition-colors duration-200 whitespace-nowrap"
+                class="px-6 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-xl transition-colors duration-200 whitespace-nowrap"
             >
               Suscribirme
             </button>
