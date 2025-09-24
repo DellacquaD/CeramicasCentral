@@ -112,8 +112,41 @@ export const handler: APIGatewayProxyHandler = async (
     }
 
     // GET: Servir datos al frontend
+    // if (event.httpMethod === 'GET') {
+    //     // Si no hay datos cargados, devolver estructura vacía con mensaje
+    //     if (!categoriasData) {
+    //         categoriasData = {
+    //             categorias: {
+    //                 "sin_datos": {
+    //                     "nombre": "Sin datos",
+    //                     "subcategoria": [
+    //                         {
+    //                             "id": 0,
+    //                             "nombre": "No hay datos disponibles",
+    //                             "descripcion": "Actualiza desde Google Sheets para cargar las categorías"
+    //                         }
+    //                     ]
+    //                 }
+    //             }
+    //         };
+    //     }
+    //
+    //     const response: ApiResponse = {
+    //         ...categoriasData,
+    //         lastUpdate,
+    //         timestamp: new Date().toISOString()
+    //     };
+    //
+    //     console.log('📤 Sirviendo datos. Última actualización:', lastUpdate || 'Nunca');
+    //
+    //     return {
+    //         statusCode: 200,
+    //         headers,
+    //         body: JSON.stringify(response)
+    //     };
+    // }
+
     if (event.httpMethod === 'GET') {
-        // Si no hay datos cargados, devolver estructura vacía con mensaje
         if (!categoriasData) {
             categoriasData = {
                 categorias: {
@@ -131,18 +164,62 @@ export const handler: APIGatewayProxyHandler = async (
             };
         }
 
-        const response: ApiResponse = {
-            ...categoriasData,
-            lastUpdate,
-            timestamp: new Date().toISOString()
-        };
+        // Obtenemos la ruta y la separamos en partes
+        const pathParts = event.path.split("/").filter(Boolean);
+        // Ejemplo:
+        // /api/get-categories           -> ["api","get-categories"]
+        // /api/get-categories/revestimientos -> ["api","get-categories","revestimientos"]
+        // /api/get-categories/revestimientos/1 -> ["api","get-categories","revestimientos","1"]
 
-        console.log('📤 Sirviendo datos. Última actualización:', lastUpdate || 'Nunca');
+        const categoria = pathParts[2];
+        const subId = pathParts[3];
 
+        if (categoria && categoriasData.categorias[categoria]) {
+            // Si piden una categoría completa
+            if (!subId) {
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(categoriasData.categorias[categoria])
+                };
+            }
+
+            // Si piden una subcategoría específica por id
+            const sub = categoriasData.categorias[categoria].subcategoria.find(s => s.id === Number(subId));
+            if (sub) {
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(sub)
+                };
+            } else {
+                return {
+                    statusCode: 404,
+                    headers,
+                    body: JSON.stringify({ error: `Subcategoría con id ${subId} no encontrada en ${categoria}` })
+                };
+            }
+        }
+
+        // Si no pasaron categoría, devuelvo todo
+        if (!categoria || categoria === "get-categories") {
+            const response: ApiResponse = {
+                ...categoriasData,
+                lastUpdate,
+                timestamp: new Date().toISOString()
+            };
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify(response)
+            };
+        }
+
+        // Si la categoría no existe
         return {
-            statusCode: 200,
+            statusCode: 404,
             headers,
-            body: JSON.stringify(response)
+            body: JSON.stringify({ error: `Categoría '${categoria}' no encontrada` })
         };
     }
 
