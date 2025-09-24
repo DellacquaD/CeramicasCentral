@@ -4,7 +4,7 @@
     <div class="h-96 bg-gradient-to-br from-gray-700 to-gray-950 relative">
       <!-- Animated tile pattern with rotating images -->
       <div class="absolute inset-0">
-        <div class="grid grid-cols-10 gap-1 h-full p-6 opacity-20">
+        <div class="lg:grid-cols-10 grid grid-cols-5 gap-1 h-full p-6 opacity-20">
           <div
               v-for="i in 30"
               :key="i"
@@ -49,39 +49,39 @@
       <div class="absolute bottom-20 right-20 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
 
       <!-- Main content -->
-      <div class="absolute inset-0 flex flex-col items-center justify-center px-8">
+      <div class="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
         <!-- Title -->
-        <div class="text-center mb-12">
-          <h1 class="text-5xl font-bold text-white mb-4 leading-tight">
+        <div class="text-center md:mb-4">
+          <h1 class="text-xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
             Todo para tu
             <span class="text-blue-200">Remodelación</span>
           </h1>
-          <p class="text-xl text-blue-100 max-w-2xl">
+          <p class="hidden sm:flex text-xl text-blue-100 max-w-2xl">
             Encuentra los mejores materiales y productos para tus proyectos
           </p>
         </div>
 
         <!-- Search bar -->
-        <div class="w-full max-w-4xl">
+        <div class="max-w-full px-4">
           <div class="relative group">
             <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
-            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
-              <div class="flex items-center">
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden ">
+              <div class="flex flex-col sm:flex-row items-stretch">
                 <div class="flex-1 relative">
                   <MagnifyingGlassIcon class="absolute left-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
                   <input
                       v-model="searchQuery"
                       @keyup.enter="handleSearch"
                       type="text"
-                      placeholder="¿Qué estás buscando? Ej: vinílicos, pisos, azulejos..."
-                      class="w-full pl-16 pr-6 py-6 text-lg bg-transparent border-0 focus:outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      placeholder="¿Qué buscas? Ej: vinílicos, pisos..."
+                      class="w-full pl-16 pr-2 py-2 text-lg bg-transparent border-0 focus:outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                 </div>
 
                 <!-- Search button -->
                 <button
                     @click="handleSearch"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 font-medium text-lg transition-colors duration-200 hover:shadow-lg"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-2 font-medium text-lg transition-colors duration-200 hover:shadow-lg"
                 >
                   Buscar
                 </button>
@@ -90,11 +90,11 @@
           </div>
 
           <!-- Quick search suggestions -->
-          <div class="mt-6 text-center">
+          <div class="mt-2 text-center">
             <span class="text-blue-100 text-sm font-medium mr-4">Búsquedas populares:</span>
             <div class="inline-flex flex-wrap gap-3 mt-2">
               <button
-                  v-for="suggestion in quickSearches"
+                  v-for="suggestion in displayedSuggestions"
                   :key="suggestion"
                   @click="quickSearch(suggestion)"
                   class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-full text-sm font-medium transition-all duration-200 hover:scale-105"
@@ -253,6 +253,16 @@ onMounted(() => {
 onUnmounted(() => {
   stopAllIntervals()
 })
+
+import { computed } from 'vue'
+
+const displayedSuggestions = computed(() => {
+  if (window.innerWidth < 640) {
+    return quickSearches.value.slice(0, 3)
+  }
+  return quickSearches.value
+})
+
 </script>
 
 <style scoped>
