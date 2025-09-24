@@ -343,6 +343,17 @@ export const handler: APIGatewayProxyHandler = async (
     }
 
     // GET: Servir datos al frontend
+    // --- helpers (ponelos arriba del handler) ---
+    function normalizeKey(s: string): string {
+        return s
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
+            .replace(/ñ/g, 'n')
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_]/g, '');
+    }
+
+// --- Dentro de tu handler, reemplaza la sección GET por esto ---
     if (event.httpMethod === 'GET') {
         if (!categoriasData) {
             categoriasData = {
@@ -361,65 +372,105 @@ export const handler: APIGatewayProxyHandler = async (
             };
         }
 
-        // Dividir la ruta en partes
-        const pathParts = event.path.split("/").filter(Boolean);
-        // Ejemplo:
-        // /api/get-categories                -> ["api","get-categories"]
-        // /api/get-categories/revestimientos -> ["api","get-categories","revestimientos"]
-        // /api/get-categories/revestimientos/1 -> ["api","get-categories","revestimientos","1"]
+        // Debug: ver exactamente qué llega
+        console.log('event.path:', event.path);
+        const pathParts = (event.path || '').split('/').filter(Boolean);
+        console.log('pathParts:', pathParts);
 
-        const categoria = pathParts[2];
-        const subId = pathParts[3];
+        const fnName = 'get-categories';
+        let fnIndex = pathParts.findIndex(p => p === fnName);
 
-        // Si piden una categoría
-        if (categoria && categoriasData.categorias[categoria]) {
-            if (!subId) {
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify(categoriasData.categorias[categoria])
-                };
-            }
-
-            // Si piden una subcategoría específica
-            const sub = categoriasData.categorias[categoria].subcategoria.find(s => s.id === Number(subId));
-            if (sub) {
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify(sub)
-                };
-            } else {
-                return {
-                    statusCode: 404,
-                    headers,
-                    body: JSON.stringify({ error: `Subcategoría con id ${subId} no encontrada en ${categoria}` })
-                };
+        // si no encontramos 'get-categories', buscamos 'functions' y asumimos que el nombre está después
+        if (fnIndex === -1) {
+            const functionsIndex = pathParts.findIndex(p => p === 'functions');
+            if (functionsIndex !== -1 && pathParts.length > functionsIndex + 1) {
+                fnIndex = functionsIndex + 1; // posición del nombre de la función
             }
         }
 
-        // Si no pasaron categoría, devolver todo
-        if (!categoria || categoria === "get-categories") {
-            const response: ApiResponse = {
-                ...categoriasData,
-                lastUpdate,
-                timestamp: new Date().toISOString()
-            };
+        let categoriaRaw: string | undefined;
+        let subIdRaw: string | undefined;
 
+        if (fnIndex !== -1) {
+            categoriaRaw = pathParts[fnIndex + 1];
+            subIdRaw = pathParts[fnIndex + 2];
+        } else {
+            // fallback: intentar encontrar el nombre directamente en cualquier posición
+            const idx = pathParts.findIndex(p => p === fnName);
+            if (idx !== -1) {
+                categoriaRaw = pathParts[idx + 1];
+                subIdRaw = pathParts[idx + 2];
+            }
+        }
+
+        if (categoriaRaw) categoriaRaw = decodeURIComponent(categoriaRaw);
+        if (subIdRaw) subIdRaw = decodeURIComponent(subIdRaw);
+
+        const categoriaKey = categoriaRaw ? normalizeKey(categoriaRaw) : undefined;
+
+        // si piden una categoría específica
+        if (categoriaKey && categoriasData.categorias[categoriaKey]) {
+            // devolver la categoría completa
+            if (!subIdRaw) {
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(categoriasData.categorias[categoriaKey], null, 2)
+                };
+            }
+
+            // si piden por ID numérico
+            const idNum = Number(subIdRaw);
+            if (!Number.isNaN(idNum)) {
+                const sub = categoriasData.categorias[categoriaKey].subcategoria.find(s => s.id === idNum);
+                if (sub) {
+                    return {
+                        statusCode: 200,
+                        headers,
+                        body: JSON.stringify(sub, null, 2)
+                    };
+                } else {
+                    return {
+                        statusCode: 404,
+                        headers,
+                        body: JSON.stringify({ error: `Subcategoría con id ${subIdRaw} no encontrada en ${categoriaKey}` })
+                    };
+                }
+            }
+
+            // si piden por nombre de subcategoría (ej: /revestimientos/Ceramica%20Porcelanato)
+            const subKey = normalizeKey(subIdRaw || '');
+            const subByName = categoriasData.categorias[categoriaKey].subcategoria.find(s => normalizeKey(s.nombre) === subKey);
+            if (subByName) {
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(subByName, null, 2)
+                };
+            }
+
+            // nada encontrado
             return {
-                statusCode: 200,
+                statusCode: 404,
                 headers,
-                body: JSON.stringify(response)
+                body: JSON.stringify({ error: `Subcategoría '${subIdRaw}' no encontrada en '${categoriaRaw}'` })
             };
         }
 
-        // Categoría no encontrada
+        // si no piden categoría válida, devolvemos todo (o mensaje)
+        const response: ApiResponse = {
+            ...categoriasData,
+            lastUpdate,
+            timestamp: new Date().toISOString()
+        };
+
         return {
-            statusCode: 404,
+            statusCode: 200,
             headers,
-            body: JSON.stringify({ error: `Categoría '${categoria}' no encontrada` })
+            body: JSON.stringify(response, null, 2)
         };
     }
+
 
     // Método no permitido
     return {
