@@ -43,24 +43,34 @@ async function fetchFromGoogleScript(): Promise<GoogleScriptResponse> {
     console.log('Fetching data from Google Apps Script...')
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
 
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'GET',
-            mode: 'cors',
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Netlify-Function/1.0'
+            },
             signal: controller.signal
         })
 
         clearTimeout(timeoutId)
 
+        const rawText = await response.text()
+        console.log('Raw response:', rawText.substring(0, 500)) // loguea los primeros 500 chars
+
         if (!response.ok) {
             throw new Error(`Google Script responded with ${response.status}: ${response.statusText}`)
         }
 
-        const data: GoogleScriptResponse = await response.json()
+        let data: GoogleScriptResponse
+        try {
+            data = JSON.parse(rawText)
+        } catch (e) {
+            throw new Error(`Invalid JSON: ${rawText.substring(0, 200)}`)
+        }
 
-        // Validar que la respuesta tenga la estructura esperada
         if (!data.categorias || typeof data.categorias !== 'object') {
             throw new Error('Invalid response structure from Google Apps Script')
         }
@@ -70,17 +80,10 @@ async function fetchFromGoogleScript(): Promise<GoogleScriptResponse> {
 
     } catch (error) {
         clearTimeout(timeoutId)
-
-        if (error instanceof Error) {
-            if (error.name === 'AbortError') {
-                throw new Error('Request timeout: Google Apps Script took too long to respond')
-            }
-            throw error
-        }
-
-        throw new Error('Unknown error occurred while fetching data')
+        throw error instanceof Error ? error : new Error('Unknown error fetching data')
     }
 }
+
 
 // Datos de fallback
 function getFallbackData(): GoogleScriptResponse {
