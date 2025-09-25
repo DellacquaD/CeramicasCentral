@@ -171,7 +171,7 @@ const loading = ref(false)
 const error = ref(null)
 
 // API URL
-const API_URL = ''
+const API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/get-categories'
 
 // Methods
 const fetchCategories = async () => {
