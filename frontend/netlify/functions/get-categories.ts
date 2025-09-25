@@ -48,10 +48,7 @@ async function fetchFromGoogleScript(): Promise<GoogleScriptResponse> {
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Netlify-Function/1.0'
-            },
+            mode: 'cors',
             signal: controller.signal
         })
 
@@ -198,7 +195,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         if (!forceRefresh && isCacheValid) {
             console.log('Using cached data')
             data = cachedData!
-            
+
             headers['X-Cache'] = 'HIT'
             headers['X-Cache-Age'] = Math.floor((now - cacheTimestamp) / 1000).toString()
         } else {
