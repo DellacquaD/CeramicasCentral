@@ -1,484 +1,274 @@
-// import type { APIGatewayProxyHandler, APIGatewayProxyEvent, Context } from 'aws-lambda';
-//
-// interface SubCategory {
-//     id: number;
-//     nombre: string;
-//     descripcion: string;
-//     valores?: string[];
-// }
-//
-// interface Category {
-//     nombre: string;
-//     subcategoria: SubCategory[];
-// }
-//
-// interface CategoriasData {
-//     categorias: Record<string, Category>;
-// }
-//
-// interface ApiResponse {
-//     categorias?: Record<string, Category>;
-//     lastUpdate?: string | null;
-//     timestamp: string;
-//     success?: boolean;
-//     error?: string;
-// }
-//
-// // Variables globales tipadas.
-// let categoriasData: CategoriasData | null = null;
-// let lastUpdate: string | null = null;
-//
-// export const handler: APIGatewayProxyHandler = async (
-//     event: APIGatewayProxyEvent,
-//     context: Context
-// ) => {
-//     const headers = {
-//         'Content-Type': 'application/json',
-//         'Access-Control-Allow-Origin': '*',
-//         'Access-Control-Allow-Headers': 'Content-Type',
-//         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-//     };
-//
-//     // Manejar preflight requests de CORS
-//     if (event.httpMethod === 'OPTIONS') {
-//         return {
-//             statusCode: 200,
-//             headers,
-//             body: ''
-//         };
-//     }
-//
-//     // POST: Actualizar datos desde Google Sheets
-//     if (event.httpMethod === 'POST') {
-//         try {
-//             if (!event.body) {
-//                 throw new Error('Body requerido para actualizar datos');
-//             }
-//
-//             const newData: CategoriasData = JSON.parse(event.body);
-//
-//             // Validación básica de estructura
-//             if (!newData.categorias || typeof newData.categorias !== 'object') {
-//                 throw new Error('Estructura JSON inválida: falta objeto categorias');
-//             }
-//
-//             // Validación más detallada
-//             for (const [key, categoria] of Object.entries(newData.categorias)) {
-//                 if (!categoria.nombre || !Array.isArray(categoria.subcategoria)) {
-//                     throw new Error(`Categoría '${key}' tiene estructura inválida`);
-//                 }
-//
-//                 // Validar subcategorías
-//                 for (const sub of categoria.subcategoria) {
-//                     if (!sub.id || !sub.nombre || !sub.descripcion) {
-//                         throw new Error(`Subcategoría inválida en categoría '${key}'`);
-//                     }
-//                 }
-//             }
-//
-//             // Actualizar datos en memoria
-//             categoriasData = newData;
-//             lastUpdate = new Date().toISOString();
-//
-//             console.log('✅ Datos actualizados exitosamente:', lastUpdate);
-//             console.log('📂 Categorías recibidas:', Object.keys(newData.categorias));
-//
-//             const response: ApiResponse = {
-//                 success: true,
-//                 lastUpdate,
-//                 timestamp: new Date().toISOString()
-//             };
-//
-//             return {
-//                 statusCode: 200,
-//                 headers,
-//                 body: JSON.stringify(response)
-//             };
-//
-//         } catch (error) {
-//             console.error('❌ Error en POST:', error);
-//
-//             const response: ApiResponse = {
-//                 error: error instanceof Error ? error.message : 'Error desconocido procesando datos',
-//                 timestamp: new Date().toISOString()
-//             };
-//
-//             return {
-//                 statusCode: 400,
-//                 headers,
-//                 body: JSON.stringify(response)
-//             };
-//         }
-//     }
-//
-//     // GET: Servir datos al frontend
-//     // if (event.httpMethod === 'GET') {
-//     //     // Si no hay datos cargados, devolver estructura vacía con mensaje
-//     //     if (!categoriasData) {
-//     //         categoriasData = {
-//     //             categorias: {
-//     //                 "sin_datos": {
-//     //                     "nombre": "Sin datos",
-//     //                     "subcategoria": [
-//     //                         {
-//     //                             "id": 0,
-//     //                             "nombre": "No hay datos disponibles",
-//     //                             "descripcion": "Actualiza desde Google Sheets para cargar las categorías"
-//     //                         }
-//     //                     ]
-//     //                 }
-//     //             }
-//     //         };
-//     //     }
-//     //
-//     //     const response: ApiResponse = {
-//     //         ...categoriasData,
-//     //         lastUpdate,
-//     //         timestamp: new Date().toISOString()
-//     //     };
-//     //
-//     //     console.log('📤 Sirviendo datos. Última actualización:', lastUpdate || 'Nunca');
-//     //
-//     //     return {
-//     //         statusCode: 200,
-//     //         headers,
-//     //         body: JSON.stringify(response)
-//     //     };
-//     // }
-//
-//     if (event.httpMethod === 'GET') {
-//         if (!categoriasData) {
-//             categoriasData = {
-//                 categorias: {
-//                     "sin_datos": {
-//                         "nombre": "Sin datos",
-//                         "subcategoria": [
-//                             {
-//                                 "id": 0,
-//                                 "nombre": "No hay datos disponibles",
-//                                 "descripcion": "Actualiza desde Google Sheets para cargar las categorías"
-//                             }
-//                         ]
-//                     }
-//                 }
-//             };
-//         }
-//
-//         // Obtenemos la ruta y la separamos en partes
-//         const pathParts = event.path.split("/").filter(Boolean);
-//         // Ejemplo:
-//         // /api/get-categories           -> ["api","get-categories"]
-//         // /api/get-categories/revestimientos -> ["api","get-categories","revestimientos"]
-//         // /api/get-categories/revestimientos/1 -> ["api","get-categories","revestimientos","1"]
-//
-//         const categoria = pathParts[2];
-//         const subId = pathParts[3];
-//
-//         if (categoria && categoriasData.categorias[categoria]) {
-//             // Si piden una categoría completa
-//             if (!subId) {
-//                 return {
-//                     statusCode: 200,
-//                     headers,
-//                     body: JSON.stringify(categoriasData.categorias[categoria])
-//                 };
-//             }
-//
-//             // Si piden una subcategoría específica por id
-//             const sub = categoriasData.categorias[categoria].subcategoria.find(s => s.id === Number(subId));
-//             if (sub) {
-//                 return {
-//                     statusCode: 200,
-//                     headers,
-//                     body: JSON.stringify(sub)
-//                 };
-//             } else {
-//                 return {
-//                     statusCode: 404,
-//                     headers,
-//                     body: JSON.stringify({ error: `Subcategoría con id ${subId} no encontrada en ${categoria}` })
-//                 };
-//             }
-//         }
-//
-//         // Si no pasaron categoría, devuelvo todo
-//         if (!categoria || categoria === "get-categories") {
-//             const response: ApiResponse = {
-//                 ...categoriasData,
-//                 lastUpdate,
-//                 timestamp: new Date().toISOString()
-//             };
-//             return {
-//                 statusCode: 200,
-//                 headers,
-//                 body: JSON.stringify(response)
-//             };
-//         }
-//
-//         // Si la categoría no existe
-//         return {
-//             statusCode: 404,
-//             headers,
-//             body: JSON.stringify({ error: `Categoría '${categoria}' no encontrada` })
-//         };
-//     }
-//
-//     // Método no permitido
-//     const response: ApiResponse = {
-//         error: `Método ${event.httpMethod} no permitido`,
-//         timestamp: new Date().toISOString()
-//     };
-//
-//     return {
-//         statusCode: 405,
-//         headers,
-//         body: JSON.stringify(response)
-//     };
-// };
+// netlify/functions/get-categories.ts
 
-import type { APIGatewayProxyHandler, APIGatewayProxyEvent, Context } from 'aws-lambda';
+import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 
-interface SubCategory {
-    id: number;
-    nombre: string;
-    descripcion: string;
-    valores?: string[];
+interface Subcategoria {
+    id: number
+    nombre: string
+    descripcion: string
+    image?: string
+    valores?: string[]
 }
 
-interface Category {
-    nombre: string;
-    subcategoria: SubCategory[];
+interface Categoria {
+    nombre: string
+    portada: string
+    subcategoria: Subcategoria[]
 }
 
-interface CategoriasData {
-    categorias: Record<string, Category>;
+interface GoogleScriptResponse {
+    categorias: Record<string, Categoria>
+    lastUpdate: string
+    timestamp: string
+    source?: string
 }
 
-interface ApiResponse {
-    categorias?: Record<string, Category>;
-    lastUpdate?: string | null;
-    timestamp: string;
-    success?: boolean;
-    error?: string;
+interface ErrorResponse {
+    error: string
+    categorias: Record<string, never>
+    lastUpdate: string
+    timestamp: string
+    source: string
 }
 
-// Variables globales tipadas.
-let categoriasData: CategoriasData | null = null;
-let lastUpdate: string | null = null;
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxtQjtC27hVj0vjaHyaV5hYt-LeWSXnVHMVV7PfifGR-YycrZ5uPnj7CIVT7GNgxazOXg/exec'
 
-export const handler: APIGatewayProxyHandler = async (
-    event: APIGatewayProxyEvent,
-    context: Context
-) => {
+// Cache en memoria (se mantiene mientras la función está activa)
+let cachedData: GoogleScriptResponse | null = null
+let cacheTimestamp: number = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutos en milisegundos
+
+// Función para obtener datos desde Google Apps Script
+async function fetchFromGoogleScript(): Promise<GoogleScriptResponse> {
+    console.log('Fetching data from Google Apps Script...')
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos timeout
+
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Netlify-Function/1.0'
+            },
+            signal: controller.signal
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+            throw new Error(`Google Script responded with ${response.status}: ${response.statusText}`)
+        }
+
+        const data: GoogleScriptResponse = await response.json()
+
+        // Validar que la respuesta tenga la estructura esperada
+        if (!data.categorias || typeof data.categorias !== 'object') {
+            throw new Error('Invalid response structure from Google Apps Script')
+        }
+
+        console.log('Data successfully fetched from Google Apps Script')
+        return data
+
+    } catch (error) {
+        clearTimeout(timeoutId)
+
+        if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout: Google Apps Script took too long to respond')
+            }
+            throw error
+        }
+
+        throw new Error('Unknown error occurred while fetching data')
+    }
+}
+
+// Datos de fallback
+function getFallbackData(): GoogleScriptResponse {
+    return {
+        categorias: {
+            revestimientos: {
+                nombre: "Revestimientos",
+                portada: "https://images.unsplash.com/photo-1571055107559-3e67626fa8be?w=400&h=300&fit=crop",
+                subcategoria: [
+                    {
+                        id: 1,
+                        nombre: "Ceramica/Porcelanato",
+                        descripcion: "Revestimientos cerámicos de alta calidad"
+                    }
+                ]
+            },
+            pisos: {
+                nombre: "Pisos",
+                portada: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
+                subcategoria: [
+                    {
+                        id: 5,
+                        nombre: "Porcelanatos",
+                        descripcion: "Pisos de porcelanato resistentes"
+                    }
+                ]
+            },
+            cocina: {
+                nombre: "Cocina",
+                portada: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
+                subcategoria: [
+                    {
+                        id: 8,
+                        nombre: "Mesadas",
+                        descripcion: "Mesadas para cocina"
+                    }
+                ]
+            },
+            griferia: {
+                nombre: "Grifería",
+                portada: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=300&fit=crop",
+                subcategoria: [
+                    {
+                        id: 11,
+                        nombre: "Grifería Cocina",
+                        descripcion: "Grifería para cocina"
+                    }
+                ]
+            },
+            bano: {
+                nombre: "Baño",
+                portada: "https://images.unsplash.com/photo-1620626011761-996317b8d101?w=400&h=300&fit=crop",
+                subcategoria: [
+                    {
+                        id: 13,
+                        nombre: "Sanitarios",
+                        descripcion: "Sanitarios y accesorios"
+                    }
+                ]
+            }
+        },
+        lastUpdate: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        source: "fallback"
+    }
+}
+
+// Handler principal
+const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+    // Headers CORS y cache optimizados
     const headers = {
-        'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-    };
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300, s-maxage=300', // 5 minutos de cache
+        'Vary': 'Accept-Encoding'
+    }
 
-    // Manejar preflight requests de CORS
+    // Manejar preflight OPTIONS request
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
             headers,
             body: ''
-        };
-    }
-
-    // POST: Actualizar datos desde Google Sheets
-    if (event.httpMethod === 'POST') {
-        try {
-            if (!event.body) {
-                throw new Error('Body requerido para actualizar datos');
-            }
-
-            const newData: CategoriasData = JSON.parse(event.body);
-
-            // Validación básica de estructura
-            if (!newData.categorias || typeof newData.categorias !== 'object') {
-                throw new Error('Estructura JSON inválida: falta objeto categorias');
-            }
-
-            // Validación más detallada
-            for (const [key, categoria] of Object.entries(newData.categorias)) {
-                if (!categoria.nombre || !Array.isArray(categoria.subcategoria)) {
-                    throw new Error(`Categoría '${key}' tiene estructura inválida`);
-                }
-
-                for (const sub of categoria.subcategoria) {
-                    if (!sub.id || !sub.nombre || !sub.descripcion) {
-                        throw new Error(`Subcategoría inválida en categoría '${key}'`);
-                    }
-                }
-            }
-
-            categoriasData = newData;
-            lastUpdate = new Date().toISOString();
-
-            const response: ApiResponse = {
-                success: true,
-                lastUpdate,
-                timestamp: new Date().toISOString()
-            };
-
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify(response)
-            };
-
-        } catch (error) {
-            const response: ApiResponse = {
-                error: error instanceof Error ? error.message : 'Error desconocido procesando datos',
-                timestamp: new Date().toISOString()
-            };
-
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify(response)
-            };
         }
     }
 
-    // GET: Servir datos al frontend
-    // --- helpers (ponelos arriba del handler) ---
-    function normalizeKey(s: string): string {
-        return s
-            .toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
-            .replace(/ñ/g, 'n')
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_]/g, '');
+    // Solo permitir GET requests
+    if (event.httpMethod !== 'GET') {
+        return {
+            statusCode: 405,
+            headers,
+            body: JSON.stringify({
+                error: 'Method Not Allowed',
+                message: 'Only GET requests are supported'
+            })
+        }
     }
 
-// --- Dentro de tu handler, reemplaza la sección GET por esto ---
-    if (event.httpMethod === 'GET') {
-        if (!categoriasData) {
-            categoriasData = {
-                categorias: {
-                    "sin_datos": {
-                        "nombre": "Sin datos",
-                        "subcategoria": [
-                            {
-                                "id": 0,
-                                "nombre": "No hay datos disponibles",
-                                "descripcion": "Actualiza desde Google Sheets para cargar las categorías"
-                            }
-                        ]
-                    }
-                }
-            };
-        }
+    try {
+        const now = Date.now()
+        const forceRefresh = event.queryStringParameters?.refresh === 'true'
 
-        // Debug: ver exactamente qué llega
-        console.log('event.path:', event.path);
-        const pathParts = (event.path || '').split('/').filter(Boolean);
-        console.log('pathParts:', pathParts);
+        // Verificar si tenemos datos en cache y están frescos
+        const isCacheValid = cachedData &&
+            cacheTimestamp &&
+            (now - cacheTimestamp) < CACHE_DURATION
 
-        const fnName = 'get-categories';
-        let fnIndex = pathParts.findIndex(p => p === fnName);
+        let data: GoogleScriptResponse
 
-        // si no encontramos 'get-categories', buscamos 'functions' y asumimos que el nombre está después
-        if (fnIndex === -1) {
-            const functionsIndex = pathParts.findIndex(p => p === 'functions');
-            if (functionsIndex !== -1 && pathParts.length > functionsIndex + 1) {
-                fnIndex = functionsIndex + 1; // posición del nombre de la función
-            }
-        }
+        if (!forceRefresh && isCacheValid) {
+            console.log('Using cached data')
+            data = cachedData!
 
-        let categoriaRaw: string | undefined;
-        let subIdRaw: string | undefined;
-
-        if (fnIndex !== -1) {
-            categoriaRaw = pathParts[fnIndex + 1];
-            subIdRaw = pathParts[fnIndex + 2];
+            // Agregar header indicando que viene del cache
+            headers['X-Cache'] = 'HIT'
+            headers['X-Cache-Age'] = Math.floor((now - cacheTimestamp) / 1000).toString()
         } else {
-            // fallback: intentar encontrar el nombre directamente en cualquier posición
-            const idx = pathParts.findIndex(p => p === fnName);
-            if (idx !== -1) {
-                categoriaRaw = pathParts[idx + 1];
-                subIdRaw = pathParts[idx + 2];
-            }
-        }
+            console.log('Fetching fresh data')
+            headers['X-Cache'] = 'MISS'
 
-        if (categoriaRaw) categoriaRaw = decodeURIComponent(categoriaRaw);
-        if (subIdRaw) subIdRaw = decodeURIComponent(subIdRaw);
+            try {
+                data = await fetchFromGoogleScript()
 
-        const categoriaKey = categoriaRaw ? normalizeKey(categoriaRaw) : undefined;
+                // Actualizar cache
+                cachedData = data
+                cacheTimestamp = now
 
-        // si piden una categoría específica
-        if (categoriaKey && categoriasData.categorias[categoriaKey]) {
-            // devolver la categoría completa
-            if (!subIdRaw) {
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify(categoriasData.categorias[categoriaKey], null, 2)
-                };
-            }
+                console.log('Data cached successfully')
 
-            // si piden por ID numérico
-            const idNum = Number(subIdRaw);
-            if (!Number.isNaN(idNum)) {
-                const sub = categoriasData.categorias[categoriaKey].subcategoria.find(s => s.id === idNum);
-                if (sub) {
-                    return {
-                        statusCode: 200,
-                        headers,
-                        body: JSON.stringify(sub, null, 2)
-                    };
+            } catch (error) {
+                console.error('Error fetching from Google Apps Script:', error)
+
+                // Si hay datos en cache aunque sean viejos, usarlos
+                if (cachedData) {
+                    console.log('Using stale cached data as fallback')
+                    data = cachedData
+                    headers['X-Cache'] = 'STALE'
+                    headers['X-Cache-Age'] = Math.floor((now - cacheTimestamp) / 1000).toString()
                 } else {
-                    return {
-                        statusCode: 404,
-                        headers,
-                        body: JSON.stringify({ error: `Subcategoría con id ${subIdRaw} no encontrada en ${categoriaKey}` })
-                    };
+                    console.log('Using fallback data')
+                    data = getFallbackData()
+                    headers['X-Cache'] = 'FALLBACK'
                 }
-            }
 
-            // si piden por nombre de subcategoría (ej: /revestimientos/Ceramica%20Porcelanato)
-            const subKey = normalizeKey(subIdRaw || '');
-            const subByName = categoriasData.categorias[categoriaKey].subcategoria.find(s => normalizeKey(s.nombre) === subKey);
-            if (subByName) {
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify(subByName, null, 2)
-                };
+                // No retornar error, sino datos de fallback
             }
-
-            // nada encontrado
-            return {
-                statusCode: 404,
-                headers,
-                body: JSON.stringify({ error: `Subcategoría '${subIdRaw}' no encontrada en '${categoriaRaw}'` })
-            };
         }
 
-        // si no piden categoría válida, devolvemos todo (o mensaje)
-        const response: ApiResponse = {
-            ...categoriasData,
-            lastUpdate,
-            timestamp: new Date().toISOString()
-        };
+        // Agregar metadata útil
+        const responseData = {
+            ...data,
+            metadata: {
+                cached: isCacheValid && !forceRefresh,
+                cacheAge: cacheTimestamp ? Math.floor((now - cacheTimestamp) / 1000) : 0,
+                totalCategories: Object.keys(data.categorias).length,
+                totalSubcategories: Object.values(data.categorias)
+                    .reduce((total, cat) => total + (cat.subcategoria?.length || 0), 0)
+            }
+        }
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(response, null, 2)
-        };
+            body: JSON.stringify(responseData)
+        }
+
+    } catch (error) {
+        console.error('Handler error:', error)
+
+        const errorResponse: ErrorResponse = {
+            error: error instanceof Error ? error.message : 'Unknown server error',
+            categorias: {},
+            lastUpdate: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
+            source: "error"
+        }
+
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify(errorResponse)
+        }
     }
+}
 
-
-    // Método no permitido
-    return {
-        statusCode: 405,
-        headers,
-        body: JSON.stringify({
-            error: `Método ${event.httpMethod} no permitido`,
-            timestamp: new Date().toISOString()
-        })
-    };
-};
+export { handler }
