@@ -198,8 +198,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         if (!forceRefresh && isCacheValid) {
             console.log('Using cached data')
             data = cachedData!
-
-            // Agregar header indicando que viene del cache
+            
             headers['X-Cache'] = 'HIT'
             headers['X-Cache-Age'] = Math.floor((now - cacheTimestamp) / 1000).toString()
         } else {
@@ -209,7 +208,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             try {
                 data = await fetchFromGoogleScript()
 
-                // Actualizar cache
                 cachedData = data
                 cacheTimestamp = now
 
@@ -218,7 +216,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             } catch (error) {
                 console.error('Error fetching from Google Apps Script:', error)
 
-                // Si hay datos en cache aunque sean viejos, usarlos
                 if (cachedData) {
                     console.log('Using stale cached data as fallback')
                     data = cachedData
@@ -229,8 +226,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                     data = getFallbackData()
                     headers['X-Cache'] = 'FALLBACK'
                 }
-
-                // No retornar error, sino datos de fallback
             }
         }
 
