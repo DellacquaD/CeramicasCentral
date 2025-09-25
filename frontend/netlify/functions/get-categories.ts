@@ -38,12 +38,18 @@ let cachedData: GoogleScriptResponse | null = null
 let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutos en milisegundos
 
+console.log("About to fetch from Google Script URL:", GOOGLE_SCRIPT_URL);
+data = await fetchFromGoogleScript();
+
 // Función para obtener datos desde Google Apps Script
 async function fetchFromGoogleScript(): Promise<GoogleScriptResponse> {
     console.log('Fetching data from Google Apps Script...')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+    const rawText = await response.text();
+    console.log('Raw response from Google Script:', rawText.substring(0, 300));
 
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL, {
