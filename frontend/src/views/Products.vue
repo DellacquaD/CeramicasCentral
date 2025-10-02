@@ -4,13 +4,26 @@
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center items-center h-64">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <span class="ml-3 text-gray-600 dark:text-gray-400">Cargando productos...</span>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-8">
-        <p class="text-red-800 dark:text-red-200">{{ error }}</p>
-        <button @click="cargarProductos(true)" class="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline">
-          Reintentar
+      <div v-else-if="error" class="text-center py-20">
+        <div class="text-red-600 dark:text-red-400 mb-4">
+          <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          <p class="text-xl font-semibold">Error al cargar productos</p>
+          <p class="text-gray-600 dark:text-gray-400 mt-2">{{ error }}</p>
+        </div>
+        <button
+            @click="cargarProductos(true)"
+            class="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-200"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span>Reintentar</span>
         </button>
       </div>
 
@@ -185,66 +198,64 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
 
-interface Producto {
-  id: string
-  sku: string
-  nombre: string
-  descripcion: string
-  marca: string
-  categoria: string
-  subcategoria: string
-  precio: number
-  precioAnterior: number
-  moneda: string
-  stock: number
-  unidad: string
-  disponible: boolean
-  color: string
-  material: string
-  medidas: string
-  metrosPorCaja: number
-  precioMetro: number
-  pei: string
-  imagenPrincipal: string
-  imagenesSecundarias: string
-  activo: boolean
-  destacado: boolean
-  nuevo: boolean
-  enOferta: boolean
-  slug: string
-  fechaCreacion: string
-  fechaActualizacion: string
-}
-
 const router = useRouter()
-const props = defineProps<{ categorySlug?: string }>()
+const props = defineProps({
+  categorySlug: String
+})
 
-const productos = ref<Producto[]>([])
+const productos = ref([])
 const loading = ref(true)
-const error = ref<string | null>(null)
-const cacheInfo = ref<any>(null)
+const error = ref(null)
+const cacheInfo = ref(null)
 const searchTerm = ref('')
 const sortBy = ref('name')
 const currentPage = ref(1)
 const itemsPerPage = 12
 
+// API URL
+const API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/products'
+
 const cargarProductos = async (forzar = false) => {
+  loading.value = true
+  error.value = null
+
   try {
-    loading.value = true
-    error.value = null
-    const url = forzar ? '/.netlify/functions/products?refresh=true' : '/.netlify/functions/products'
-    const response = await fetch(url)
-    if (!response.ok) throw new Error(`Error ${response.status}`)
+    console.log('Intentando fetch a:', API_URL)
+
+    const url = forzar ? `${API_URL}?refresh=true` : API_URL
+
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache'
+    })
+
+    console.log('Response status:', response.status)
+    console.log('Response ok:', response.ok)
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
+    }
+
     const data = await response.json()
-    productos.value = data.productos || []
-    cacheInfo.value = data.cacheInfo
+    console.log('Data recibida:', data)
+
+    if (data.productos) {
+      productos.value = data.productos
+      cacheInfo.value = data.cacheInfo
+      console.log('Productos cargados:', productos.value.length)
+    } else {
+      throw new Error('Formato de respuesta inesperado - no se encontró "productos"')
+    }
+
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error cargando productos'
+    console.error('Error al cargar productos:', err)
+    error.value = err.message || 'Error desconocido al cargar productos'
   } finally {
     loading.value = false
   }
@@ -252,23 +263,34 @@ const cargarProductos = async (forzar = false) => {
 
 const productosFiltradosPorCategoria = computed(() => {
   if (props.categorySlug) {
-    return productos.value.filter(p => p.categoria.toLowerCase() === props.categorySlug?.toLowerCase() && p.disponible && p.activo)
+    return productos.value.filter(p =>
+        p.categoria.toLowerCase() === props.categorySlug?.toLowerCase() &&
+        p.disponible &&
+        p.activo
+    )
   }
   return productos.value.filter(p => p.disponible && p.activo)
 })
 
 const productosFiltrados = computed(() => {
   let result = productosFiltradosPorCategoria.value
+
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase()
-    result = result.filter(p => p.nombre.toLowerCase().includes(term) || p.descripcion.toLowerCase().includes(term) || p.marca.toLowerCase().includes(term))
+    result = result.filter(p =>
+        p.nombre.toLowerCase().includes(term) ||
+        p.descripcion.toLowerCase().includes(term) ||
+        p.marca.toLowerCase().includes(term)
+    )
   }
+
   switch (sortBy.value) {
     case 'price-low': result = [...result].sort((a, b) => a.precio - b.precio); break
     case 'price-high': result = [...result].sort((a, b) => b.precio - a.precio); break
     case 'stock': result = [...result].sort((a, b) => b.stock - a.stock); break
     default: result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
   }
+
   return result
 })
 
@@ -280,9 +302,10 @@ const paginatedProducts = computed(() => {
 const totalPages = computed(() => Math.ceil(productosFiltrados.value.length / itemsPerPage))
 
 const displayPages = computed(() => {
-  const pages: (number | string)[] = []
+  const pages = []
   const total = totalPages.value
   const current = currentPage.value
+
   if (total <= 7) {
     for (let i = 1; i <= total; i++) pages.push(i)
   } else {
@@ -302,18 +325,19 @@ const displayPages = computed(() => {
       pages.push(total)
     }
   }
+
   return pages
 })
 
 const pageTitle = computed(() => {
   if (props.categorySlug) {
-    const names: Record<string, string> = { pisos: 'Pisos', revestimientos: 'Revestimientos', cocina: 'Cocina', griferia: 'Grifería', bano: 'Baño' }
+    const names = { pisos: 'Pisos', revestimientos: 'Revestimientos', cocina: 'Cocina', griferia: 'Grifería', bano: 'Baño' }
     return names[props.categorySlug.toLowerCase()] || 'Productos'
   }
   return 'Todos los Productos'
 })
 
-const goToProduct = (product: Producto) => router.push(`/producto/${product.slug}`)
+const goToProduct = (product) => router.push(`/producto/${product.slug}`)
 
 watch(() => props.categorySlug, () => { currentPage.value = 1; searchTerm.value = '' })
 watch(searchTerm, () => currentPage.value = 1)
@@ -327,5 +351,13 @@ onMounted(() => cargarProductos())
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>
