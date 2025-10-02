@@ -3,7 +3,7 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxuuC0pWJMdMg
 
 let cache = null
 let cacheTime = null
-const CACHE_DURATION = 30 * 60 * 1000 // 30 minutos
+const CACHE_DURATION = 30 * 60 * 1000
 
 exports.handler = async (event) => {
     const headers = {
@@ -16,67 +16,11 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: '' }
     }
 
-    // POST: Webhook desde Google Sheets (forzar actualización)
-    if (event.httpMethod === 'POST') {
-        try {
-            console.log('Webhook recibido desde Google Sheets')
-
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 25000)
-
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'GET',
-                signal: controller.signal
-            })
-
-            clearTimeout(timeoutId)
-
-            if (!response.ok) {
-                throw new Error(`Google Script error: ${response.status}`)
-            }
-
-            const data = await response.json()
-
-            if (!data.productos || !Array.isArray(data.productos)) {
-                throw new Error('Estructura de datos inválida')
-            }
-
-            cache = data
-            cacheTime = Date.now()
-
-            console.log(`Cache actualizado: ${data.productos.length} productos`)
-
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({
-                    success: true,
-                    mensaje: 'Cache actualizado correctamente',
-                    totalProductos: data.productos.length,
-                    ultimaSincronizacion: new Date().toISOString()
-                })
-            }
-
-        } catch (error) {
-            console.error('Error en webhook:', error.message)
-            return {
-                statusCode: 500,
-                headers,
-                body: JSON.stringify({
-                    error: error.message,
-                    success: false
-                })
-            }
-        }
-    }
-
-    // GET: Servir productos
     if (event.httpMethod === 'GET') {
         try {
             const now = Date.now()
             const forceRefresh = event.queryStringParameters?.refresh === 'true'
 
-            // Usar cache si es válido
             if (!forceRefresh && cache && cacheTime && (now - cacheTime) < CACHE_DURATION) {
                 console.log('Using cache')
                 headers['X-Cache'] = 'HIT'
@@ -97,7 +41,6 @@ exports.handler = async (event) => {
                 }
             }
 
-            // Fetch desde Google Script
             console.log('Fetching from Google Script:', GOOGLE_SCRIPT_URL)
 
             const controller = new AbortController()
@@ -105,21 +48,32 @@ exports.handler = async (event) => {
 
             const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'GET',
-                signal: controller.signal
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json'
+                }
             })
 
             clearTimeout(timeoutId)
 
             console.log('Response status:', response.status)
+            console.log('Response headers:', response.headers.get('content-type'))
 
-            if (!response.ok) {
-                throw new Error(`Google Script error: ${response.status}`)
+            // DEBUG: Ver qué estamos recibiendo
+            const textResponse = await response.text()
+            console.log('Response preview:', textResponse.substring(0, 200))
+
+            // Intentar parsear como JSON
+            let data
+            try {
+                data = JSON.parse(textResponse)
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError.message)
+                throw new Error(`Response is not valid JSON. Got: ${textResponse.substring(0, 100)}`)
             }
 
-            const data = await response.json()
             console.log('Products received:', data.productos?.length || 0)
 
-            // Actualizar cache
             cache = data
             cacheTime = now
 
@@ -141,7 +95,6 @@ exports.handler = async (event) => {
         } catch (error) {
             console.error('Error:', error.message)
 
-            // Si hay cache viejo, usarlo
             if (cache) {
                 console.log('Using stale cache')
                 headers['X-Cache'] = 'STALE'
@@ -163,7 +116,6 @@ exports.handler = async (event) => {
                 }
             }
 
-            // Si no hay cache, error
             return {
                 statusCode: 500,
                 headers,
