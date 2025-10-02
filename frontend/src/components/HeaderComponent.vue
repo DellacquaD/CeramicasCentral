@@ -6,7 +6,7 @@
         <div class="flex items-center">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center shadow-sm">
-              <img src="../assets/icono.png" alt="icon">
+              <img src="../assets/logoVitto.jpg" alt="icon">
             </div>
             <div class="flex flex-col">
               <span class="hidden md:flex text-2xl font-bold text-gray-900 dark:text-white ">Cerámicas</span>
