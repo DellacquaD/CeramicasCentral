@@ -1,358 +1,324 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <nav class="flex mb-4" aria-label="Breadcrumb">
-          <ol class="flex items-center space-x-2">
-            <li>
-              <router-link to="/" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                Inicio
-              </router-link>
-            </li>
-            <ChevronRightIcon class="w-4 h-4 text-gray-400" />
-            <li v-if="categorySlug">
-              <router-link to="/categorias" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                Categorías
-              </router-link>
-            </li>
-            <ChevronRightIcon v-if="categorySlug" class="w-4 h-4 text-gray-400" />
-            <li class="text-gray-900 dark:text-white font-medium">
-              {{ pageTitle }}
-            </li>
-          </ol>
-        </nav>
-
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          {{ pageTitle }}
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400">
-          {{ products.length }} productos encontrados
-        </p>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center items-center h-64">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
 
-      <!-- Filters and sorting -->
-      <div class="flex flex-col sm:flex-row gap-4 mb-8">
-        <!-- Search -->
-        <div class="flex-1">
-          <div class="relative">
-            <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-                v-model="searchTerm"
-                type="text"
-                placeholder="Buscar productos..."
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <!-- Sort -->
-        <select
-            v-model="sortBy"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="name">Ordenar por nombre</option>
-          <option value="price-low">Precio menor a mayor</option>
-          <option value="price-high">Precio mayor a menor</option>
-          <option value="newest">Más recientes</option>
-        </select>
-
-        <!-- Grid toggle -->
-        <div class="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-          <button
-              @click="gridCols = 3"
-              :class="[
-              'px-3 py-2 transition-colors',
-              gridCols === 3 ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-            ]"
-          >
-            <Squares2X2Icon class="w-5 h-5" />
-          </button>
-          <button
-              @click="gridCols = 4"
-              :class="[
-              'px-3 py-2 transition-colors border-l border-gray-300 dark:border-gray-600',
-              gridCols === 4 ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-            ]"
-          >
-            <TableCellsIcon class="w-5 h-5" />
-          </button>
-        </div>
+      <!-- Error State -->
+      <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-8">
+        <p class="text-red-800 dark:text-red-200">{{ error }}</p>
+        <button @click="cargarProductos(true)" class="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline">
+          Reintentar
+        </button>
       </div>
 
-      <!-- Products grid -->
-      <div :class="[
-        'grid gap-6 mb-12',
-        gridCols === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-      ]">
-        <div
-            v-for="product in filteredProducts"
-            :key="product.id"
-            @click="goToProduct(product)"
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 group"
-        >
-          <div class="relative">
-            <img
-                :src="product.image"
-                :alt="product.name"
-                class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div v-if="product.discount" class="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">
-              -{{ product.discount }}%
+      <!-- Content -->
+      <template v-else>
+        <!-- Header -->
+        <div class="mb-8">
+          <nav class="flex mb-4" aria-label="Breadcrumb">
+            <ol class="flex items-center space-x-2">
+              <li>
+                <router-link to="/" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                  Inicio
+                </router-link>
+              </li>
+              <ChevronRightIcon class="w-4 h-4 text-gray-400" />
+              <li class="text-gray-900 dark:text-white font-medium">
+                {{ pageTitle }}
+              </li>
+            </ol>
+          </nav>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {{ pageTitle }}
+              </h1>
+              <p class="text-gray-600 dark:text-gray-400">
+                {{ productosFiltrados.length }} productos encontrados
+              </p>
             </div>
-            <button
-                @click.stop="$emit('add-to-cart', product)"
-                class="absolute top-2 right-2 bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <ShoppingCartIcon class="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            </button>
+
+            <!-- Cache Info -->
+            <div v-if="cacheInfo" class="text-xs text-gray-500 dark:text-gray-400 text-right">
+              <p>Actualizado hace {{ cacheInfo.edadEnMinutos || 0 }} min</p>
+              <button @click="cargarProductos(true)" class="text-blue-600 dark:text-blue-400 hover:underline">
+                Refrescar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+          <div class="flex-1">
+            <div class="relative">
+              <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                  v-model="searchTerm"
+                  type="text"
+                  placeholder="Buscar productos..."
+                  class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
-          <div class="p-4">
-            <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-              {{ product.name }}
-            </h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-              {{ product.description }}
-            </p>
+          <select v-model="sortBy" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+            <option value="name">Ordenar por nombre</option>
+            <option value="price-low">Precio menor a mayor</option>
+            <option value="price-high">Precio mayor a menor</option>
+            <option value="stock">Mayor stock</option>
+          </select>
+        </div>
 
-            <div class="flex items-center justify-between">
-              <div>
-                <span v-if="product.originalPrice" class="text-sm text-gray-500 line-through mr-2">
-                  ${{ product.originalPrice.toLocaleString() }}
-                </span>
-                <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  ${{ product.price.toLocaleString() }}
-                </span>
-              </div>
+        <!-- No products -->
+        <div v-if="productosFiltrados.length === 0" class="text-center py-12">
+          <p class="text-gray-500 dark:text-gray-400 text-lg">No se encontraron productos</p>
+        </div>
 
-              <div class="flex items-center">
-                <div class="flex text-yellow-400 mr-1">
-                  <StarIcon class="w-4 h-4 fill-current" />
-                  <StarIcon class="w-4 h-4 fill-current" />
-                  <StarIcon class="w-4 h-4 fill-current" />
-                  <StarIcon class="w-4 h-4 fill-current" />
-                  <StarIcon class="w-4 h-4 text-gray-300 dark:text-gray-600" />
+        <!-- Products grid -->
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div
+              v-for="product in paginatedProducts"
+              :key="product.id"
+              @click="goToProduct(product)"
+              class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 group"
+          >
+            <div class="relative">
+              <div class="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                <img
+                    v-if="product.imagenPrincipal"
+                    :src="product.imagenPrincipal"
+                    :alt="product.nombre"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div v-else class="text-center p-4">
+                  <div class="text-4xl mb-2">📦</div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">{{ product.marca }}</p>
                 </div>
-                <span class="text-xs text-gray-500">({{ product.reviews }})</span>
+              </div>
+
+              <div class="absolute top-2 left-2 flex flex-col gap-1">
+                <span v-if="product.nuevo" class="bg-green-500 text-white px-2 py-1 rounded-md text-xs font-bold">NUEVO</span>
+                <span v-if="product.enOferta" class="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">OFERTA</span>
+              </div>
+
+              <div class="absolute bottom-2 right-2">
+                <span :class="['px-2 py-1 rounded-md text-xs font-semibold', product.stock > 50 ? 'bg-green-100 text-green-800' : product.stock > 10 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800']">
+                  Stock: {{ product.stock.toFixed(2) }} {{ product.unidad }}
+                </span>
+              </div>
+            </div>
+
+            <div class="p-4">
+              <p class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">{{ product.marca }}</p>
+              <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 min-h-[3rem]">{{ product.nombre }}</h3>
+
+              <div class="flex items-center gap-2 mb-3 text-xs text-gray-600 dark:text-gray-400">
+                <span v-if="product.medidas" class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ product.medidas }}</span>
+                <span v-if="product.color" class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ product.color }}</span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <span v-if="product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
+                    ${{ product.precioAnterior.toLocaleString('es-UY') }}
+                  </span>
+                  <div class="flex flex-col">
+                    <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
+                      ${{ product.precio.toLocaleString('es-UY', { minimumFractionDigits: 2 }) }}
+                    </span>
+                    <span v-if="product.precioMetro" class="text-xs text-gray-500">
+                      ${{ product.precioMetro.toFixed(2) }}/m²
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="product.pei" class="text-xs">
+                  <span class="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-semibold">
+                    PEI {{ product.pei }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="product.metrosPorCaja" class="mt-2 text-xs text-gray-500">
+                📦 {{ product.metrosPorCaja }} m²/caja
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Pagination -->
-      <div class="flex justify-center">
-        <nav class="flex items-center space-x-2">
-          <button
-              @click="currentPage > 1 && (currentPage--)"
-              :disabled="currentPage <= 1"
-              class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-          >
-            Anterior
-          </button>
+        <!-- Pagination -->
+        <div v-if="totalPages > 1" class="flex justify-center">
+          <nav class="flex items-center space-x-2">
+            <button
+                @click="currentPage > 1 && (currentPage--)"
+                :disabled="currentPage <= 1"
+                class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              Anterior
+            </button>
 
-          <span
-              v-for="page in totalPages"
-              :key="page"
-              @click="currentPage = page"
-              :class="[
-              'px-3 py-2 rounded-lg cursor-pointer transition-colors',
-              page === currentPage
-                ? 'bg-blue-600 text-white'
-                : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-            ]"
-          >
-            {{ page }}
-          </span>
+            <span
+                v-for="page in displayPages"
+                :key="page"
+                @click="typeof page === 'number' && (currentPage = page)"
+                :class="['px-3 py-2 rounded-lg transition-colors', page === currentPage ? 'bg-blue-600 text-white' : typeof page === 'number' ? 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : 'text-gray-500']"
+            >
+              {{ page }}
+            </span>
 
-          <button
-              @click="currentPage < totalPages && (currentPage++)"
-              :disabled="currentPage >= totalPages"
-              class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-          >
-            Siguiente
-          </button>
-        </nav>
-      </div>
+            <button
+                @click="currentPage < totalPages && (currentPage++)"
+                :disabled="currentPage >= totalPages"
+                class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </nav>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import {
-  MagnifyingGlassIcon,
-  ChevronRightIcon,
-  ShoppingCartIcon,
-  StarIcon,
-  Squares2X2Icon,
-  TableCellsIcon
-} from '@heroicons/vue/24/outline'
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
 
-const route = useRoute()
+interface Producto {
+  id: string
+  sku: string
+  nombre: string
+  descripcion: string
+  marca: string
+  categoria: string
+  subcategoria: string
+  precio: number
+  precioAnterior: number
+  moneda: string
+  stock: number
+  unidad: string
+  disponible: boolean
+  color: string
+  material: string
+  medidas: string
+  metrosPorCaja: number
+  precioMetro: number
+  pei: string
+  imagenPrincipal: string
+  imagenesSecundarias: string
+  activo: boolean
+  destacado: boolean
+  nuevo: boolean
+  enOferta: boolean
+  slug: string
+  fechaCreacion: string
+  fechaActualizacion: string
+}
+
 const router = useRouter()
+const props = defineProps<{ categorySlug?: string }>()
 
-// Props
-const props = defineProps({
-  categorySlug: String
-})
-
-// Emits
-defineEmits(['add-to-cart'])
-
-// State
+const productos = ref<Producto[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+const cacheInfo = ref<any>(null)
 const searchTerm = ref('')
 const sortBy = ref('name')
-const gridCols = ref(3)
 const currentPage = ref(1)
 const itemsPerPage = 12
 
-// Mock products data
-const allProducts = ref([
-  {
-    id: 1,
-    name: 'Piso Vinílico Premium Wood Oak',
-    description: 'Piso vinílico que imita madera de roble con alta resistencia al tráfico',
-    price: 8500,
-    originalPrice: 10000,
-    discount: 15,
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop',
-    category: 'vinilicos',
-    reviews: 24,
-    slug: 'piso-vinilico-premium-wood-oak'
-  },
-  {
-    id: 2,
-    name: 'Porcelanato Símil Mármol Carrara 60x60',
-    description: 'Porcelanato rectificado que simula mármol de Carrara, perfecto para espacios elegantes',
-    price: 12500,
-    image: 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=400&h=300&fit=crop',
-    category: 'pisos',
-    reviews: 18,
-    slug: 'porcelanato-simil-marmol-carrara-60x60'
-  },
-  {
-    id: 3,
-    name: 'Azulejo Subway Blanco 7.5x15',
-    description: 'Clásico azulejo tipo subway para cocinas y baños modernos',
-    price: 3200,
-    originalPrice: 3800,
-    discount: 16,
-    image: 'https://images.unsplash.com/photo-1571055107559-3e67626fa8be?w=400&h=300&fit=crop',
-    category: 'paredes',
-    reviews: 45,
-    slug: 'azulejo-subway-blanco-7-5x15'
-  },
-  {
-    id: 4,
-    name: 'Mesada de Granito Negro Absoluto',
-    description: 'Mesada de granito negro con acabado pulido, ideal para cocinas modernas',
-    price: 25000,
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop',
-    category: 'cocina',
-    reviews: 12,
-    slug: 'mesada-granito-negro-absoluto'
-  },
-  {
-    id: 5,
-    name: 'Grifo Monocomando Cocina Acero Inox',
-    description: 'Grifo monocomando extraíble para cocina en acero inoxidable',
-    price: 15500,
-    originalPrice: 18000,
-    discount: 14,
-    image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=300&fit=crop',
-    category: 'bano',
-    reviews: 31,
-    slug: 'grifo-monocomando-cocina-acero-inox'
-  },
-  {
-    id: 6,
-    name: 'Inodoro con Descarga Dual',
-    description: 'Inodoro moderno con sistema de descarga dual para ahorro de agua',
-    price: 22000,
-    image: 'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=400&h=300&fit=crop',
-    category: 'bano',
-    reviews: 28,
-    slug: 'inodoro-descarga-dual'
+const cargarProductos = async (forzar = false) => {
+  try {
+    loading.value = true
+    error.value = null
+    const url = forzar ? '/.netlify/functions/products?refresh=true' : '/.netlify/functions/products'
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`Error ${response.status}`)
+    const data = await response.json()
+    productos.value = data.productos || []
+    cacheInfo.value = data.cacheInfo
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Error cargando productos'
+  } finally {
+    loading.value = false
   }
-])
+}
 
-// Computed
-const products = computed(() => {
+const productosFiltradosPorCategoria = computed(() => {
   if (props.categorySlug) {
-    return allProducts.value.filter(product => product.category === props.categorySlug)
+    return productos.value.filter(p => p.categoria.toLowerCase() === props.categorySlug?.toLowerCase() && p.disponible && p.activo)
   }
-  return allProducts.value
+  return productos.value.filter(p => p.disponible && p.activo)
+})
+
+const productosFiltrados = computed(() => {
+  let result = productosFiltradosPorCategoria.value
+  if (searchTerm.value) {
+    const term = searchTerm.value.toLowerCase()
+    result = result.filter(p => p.nombre.toLowerCase().includes(term) || p.descripcion.toLowerCase().includes(term) || p.marca.toLowerCase().includes(term))
+  }
+  switch (sortBy.value) {
+    case 'price-low': result = [...result].sort((a, b) => a.precio - b.precio); break
+    case 'price-high': result = [...result].sort((a, b) => b.precio - a.precio); break
+    case 'stock': result = [...result].sort((a, b) => b.stock - a.stock); break
+    default: result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }
+  return result
+})
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return productosFiltrados.value.slice(start, start + itemsPerPage)
+})
+
+const totalPages = computed(() => Math.ceil(productosFiltrados.value.length / itemsPerPage))
+
+const displayPages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    if (current <= 3) {
+      for (let i = 1; i <= 5; i++) pages.push(i)
+      pages.push('...')
+      pages.push(total)
+    } else if (current >= total - 2) {
+      pages.push(1)
+      pages.push('...')
+      for (let i = total - 4; i <= total; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      pages.push('...')
+      for (let i = current - 1; i <= current + 1; i++) pages.push(i)
+      pages.push('...')
+      pages.push(total)
+    }
+  }
+  return pages
 })
 
 const pageTitle = computed(() => {
   if (props.categorySlug) {
-    const categoryNames = {
-      'vinilicos': 'Vinílicos',
-      'pisos': 'Pisos',
-      'paredes': 'Paredes',
-      'cocina': 'Cocina',
-      'bano': 'Baño',
-      'ofertas': 'Ofertas'
-    }
-    return categoryNames[props.categorySlug] || 'Productos'
+    const names: Record<string, string> = { pisos: 'Pisos', revestimientos: 'Revestimientos', cocina: 'Cocina', griferia: 'Grifería', bano: 'Baño' }
+    return names[props.categorySlug.toLowerCase()] || 'Productos'
   }
   return 'Todos los Productos'
 })
 
-const filteredProducts = computed(() => {
-  let result = products.value
+const goToProduct = (product: Producto) => router.push(`/producto/${product.slug}`)
 
-  // Filter by search term
-  if (searchTerm.value) {
-    result = result.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.value.toLowerCase())
-    )
-  }
+watch(() => props.categorySlug, () => { currentPage.value = 1; searchTerm.value = '' })
+watch(searchTerm, () => currentPage.value = 1)
 
-  // Sort products
-  switch (sortBy.value) {
-    case 'price-low':
-      result.sort((a, b) => a.price - b.price)
-      break
-    case 'price-high':
-      result.sort((a, b) => b.price - a.price)
-      break
-    case 'newest':
-      result.sort((a, b) => b.id - a.id)
-      break
-    default:
-      result.sort((a, b) => a.name.localeCompare(b.name))
-  }
-
-  // Pagination
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return result.slice(start, end)
-})
-
-const totalPages = computed(() => {
-  const filtered = products.value.filter(product => {
-    if (!searchTerm.value) return true
-    return product.name.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.value.toLowerCase())
-  })
-  return Math.ceil(filtered.length / itemsPerPage)
-})
-
-// Methods
-const goToProduct = (product) => {
-  router.push(`/producto/${product.slug}`)
-}
-
-// Watch for category changes
-watch(() => props.categorySlug, () => {
-  currentPage.value = 1
-  searchTerm.value = ''
-})
+onMounted(() => cargarProductos())
 </script>
 
 <style scoped>
