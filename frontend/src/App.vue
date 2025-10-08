@@ -1,26 +1,20 @@
 <template>
   <div id="app" class="min-h-screen w-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header Component -->
+<!--    <HeaderComponent-->
+<!--        :is-dark="isDark"-->
+<!--        @toggle-theme="toggleTheme"-->
+<!--    />-->
+
     <HeaderComponent
-        :cart-count="cartCount"
         :is-dark="isDark"
-        @toggle-cart="toggleCart"
-        @toggle-search="toggleSearch"
         @toggle-theme="toggleTheme"
+        @toggle-cart="toggleCart"
     />
 
     <!-- Main Router View -->
     <main>
-      <router-view
-          @search="handleSearch"
-          @category-select="handleCategorySelect"
-          @add-to-cart="addToCart"
-          @remove-from-cart="removeFromCart"
-          @update-quantity="updateCartQuantity"
-          @remove-item="removeFromCart"
-          @checkout="handleCheckout"
-          :items="cartItems"
-      />
+      <router-view />
     </main>
 
     <!-- Footer Component -->
@@ -34,12 +28,8 @@
     <!-- Cart Sidebar (when toggled) -->
     <CartSidebar
         v-if="showCart"
-        :items="cartItems"
         :currency="currentCurrency"
         @close="toggleCart"
-        @update-quantity="updateCartQuantity"
-        @remove-item="removeFromCart"
-        @checkout="handleCheckout"
     />
 
     <!-- Search Modal (when toggled) -->
@@ -49,7 +39,7 @@
         @search="handleSearch"
     />
 
-    <!-- Notification Toast -->
+    <!-- Notification Toast (simplificado, el store tiene su propio sistema) -->
     <div
         v-if="notification.show"
         :class="[
@@ -63,38 +53,38 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import HeaderComponent from './components/HeaderComponent.vue'
 import FooterComponent from './components/FooterComponent.vue'
 import CartSidebar from './components/CartSidebar.vue'
 import SearchModal from './components/SearchModal.vue'
+import { useCartStore } from './stores/cart'
 
-// Router
+// Router y Store
 const router = useRouter()
+const cartStore = useCartStore()
 
-// State
+// State (solo lo que no está en el store)
 const currentCurrency = ref('UYU')
-const cartItems = ref([])
-const cartCount = ref(0)
 const isDark = ref(false)
 const showCart = ref(false)
 const showSearchModal = ref(false)
 
-// Notification system
+// Notification system (local para notificaciones de la app)
 const notification = reactive({
   show: false,
   message: '',
-  type: 'success'
+  type: 'success' as 'success' | 'error'
 })
 
 // Methods
-const handleNavigation = (path) => {
+const handleNavigation = (path: string) => {
   router.push(path)
 }
 
-const handleSearch = (searchData) => {
+const handleSearch = (searchData: any) => {
   const query = typeof searchData === 'string' ? searchData : searchData.query || searchData
   router.push({
     name: 'Search',
@@ -107,7 +97,7 @@ const handleSearch = (searchData) => {
   showNotification(`Buscando: ${query}`)
 }
 
-const handleCategorySelect = (category) => {
+const handleCategorySelect = (category: any) => {
   const categorySlug = category.name.toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[áàäâ]/g, 'a')
@@ -119,55 +109,6 @@ const handleCategorySelect = (category) => {
 
   router.push(`/categoria/${categorySlug}`)
   showNotification(`Explorando ${category.name}`)
-}
-
-const addToCart = (product) => {
-  const existingItem = cartItems.value.find(item => item.id === product.id)
-
-  if (existingItem) {
-    existingItem.quantity += 1
-  } else {
-    cartItems.value.push({
-      ...product,
-      quantity: 1,
-      // Asegurar que tenga imagen por defecto
-      image: product.image || 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=100&h=100&fit=crop'
-    })
-  }
-
-  updateCartCount()
-  showNotification(`${product.name} agregado al carrito`)
-
-  // Guardar en localStorage
-  localStorage.setItem('cartItems', JSON.stringify(cartItems.value))
-}
-
-const removeFromCart = (productId) => {
-  cartItems.value = cartItems.value.filter(item => item.id !== productId)
-  updateCartCount()
-  showNotification('Producto eliminado del carrito')
-
-  // Guardar en localStorage
-  localStorage.setItem('cartItems', JSON.stringify(cartItems.value))
-}
-
-const updateCartQuantity = (productId, quantity) => {
-  const item = cartItems.value.find(item => item.id === productId)
-  if (item) {
-    if (quantity <= 0) {
-      removeFromCart(productId)
-    } else {
-      item.quantity = quantity
-      updateCartCount()
-
-      // Guardar en localStorage
-      localStorage.setItem('cartItems', JSON.stringify(cartItems.value))
-    }
-  }
-}
-
-const updateCartCount = () => {
-  cartCount.value = cartItems.value.reduce((total, item) => total + item.quantity, 0)
 }
 
 const toggleCart = () => {
@@ -185,42 +126,13 @@ const toggleTheme = () => {
   showNotification(`Cambiado a tema ${isDark.value ? 'oscuro' : 'claro'}`)
 }
 
-const setCurrency = (currency) => {
+const setCurrency = (currency: string) => {
   currentCurrency.value = currency
   localStorage.setItem('currency', currency)
   showNotification(`Moneda cambiada a ${currency}`)
 }
 
-const handleCheckout = () => {
-  if (cartItems.value.length === 0) {
-    showNotification('El carrito está vacío', 'error')
-    return
-  }
-
-  const phone = '598XXXXXXXX' // Reemplaza con tu número real
-  const items = cartItems.value.map(item =>
-      `• ${item.name} x${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`
-  ).join('\n')
-
-  const total = cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-
-  const message = `¡Hola! Me interesa realizar este pedido:
-
-${items}
-
-*Total: ${currentCurrency.value} ${total.toLocaleString()}*
-
-¿Podrían confirmarme disponibilidad y forma de pago?
-
-¡Gracias!`
-
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-  window.open(url, '_blank')
-
-  showNotification('Redirigiendo a WhatsApp...')
-}
-
-const showNotification = (message, type = 'success') => {
+const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
   notification.message = message
   notification.type = type
   notification.show = true
@@ -239,20 +151,6 @@ const initTheme = () => {
   document.documentElement.classList.toggle('dark', isDark.value)
 }
 
-// Initialize cart from localStorage
-const initCart = () => {
-  const savedCart = localStorage.getItem('cartItems')
-  if (savedCart) {
-    try {
-      cartItems.value = JSON.parse(savedCart)
-      updateCartCount()
-    } catch (error) {
-      console.error('Error loading cart from localStorage:', error)
-      cartItems.value = []
-    }
-  }
-}
-
 // Initialize currency
 const initCurrency = () => {
   const savedCurrency = localStorage.getItem('currency')
@@ -264,12 +162,16 @@ const initCurrency = () => {
 // Initialize all on mount
 onMounted(() => {
   initTheme()
-  initCart()
   initCurrency()
+  // El carrito se carga automáticamente desde el store
+  cartStore.loadFromLocalStorage()
 })
 </script>
 
-<style scoped>
+<style>
+/* Global styles */
+@import './style.css';
+
 /* Smooth transitions for theme changes */
 * {
   transition-property: background-color, border-color, color;
@@ -278,29 +180,60 @@ onMounted(() => {
 }
 
 /* Custom scrollbar */
-:deep(::-webkit-scrollbar) {
+::-webkit-scrollbar {
   width: 6px;
 }
 
-:deep(::-webkit-scrollbar-track) {
+::-webkit-scrollbar-track {
   background: transparent;
 }
 
-:deep(::-webkit-scrollbar-thumb) {
+::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
 }
 
-:deep(::-webkit-scrollbar-thumb:hover) {
+::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
 /* Dark mode scrollbar */
-.dark :deep(::-webkit-scrollbar-thumb) {
+.dark ::-webkit-scrollbar-thumb {
   background: #475569;
 }
 
-.dark :deep(::-webkit-scrollbar-thumb:hover) {
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
+}
+
+/* Animaciones para notificaciones */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+.animate-slide-out {
+  animation: slide-out 0.3s ease-in;
 }
 </style>
