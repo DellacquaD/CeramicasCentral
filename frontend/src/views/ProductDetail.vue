@@ -194,8 +194,8 @@
             <!-- Price -->
             <div class="border-t border-b border-gray-200 dark:border-gray-700 py-4 flex justify-around items-center">
               <div class="flex items-baseline gap-3 mb-2">
-                <span v-if="producto.precioAnterior > 0" class="text-xl text-gray-500 line-through">
-                  ${{ producto.precioAnterior.toLocaleString('es-UY') }}
+                <span v-if="producto.precioAnterior && producto.precioAnterior > 0" class="text-xl text-gray-500 line-through">
+                  ${{ producto.precioAnterior?.toLocaleString('es-UY') }}
                 </span>
                 <span class="text-4xl font-bold text-blue-600 dark:text-blue-400">
                   ${{ precioTotal.toLocaleString('es-UY') }}
@@ -319,7 +319,7 @@
                 <p class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">{{ relatedProduct.marca }}</p>
                 <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">{{ relatedProduct.nombre }}</h3>
                 <p class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  ${{ parseInt(relatedProduct.precioMetro.toFixed(2) * relatedProduct.metrosPorCaja).toLocaleString('es-UY') }}
+                  ${{ (relatedProduct.precioMetro * relatedProduct.metrosPorCaja).toFixed(0) }}
                 </p>
               </div>
             </div>
@@ -377,7 +377,7 @@ const error = ref<string | null>(null)
 const quantity = ref(1)
 const imagenActualIndex = ref(0)
 const thumbnailStartIndex = ref(0)
-const autoplayInterval = ref<NodeJS.Timeout | null>(null)
+const autoplayInterval = ref<number | null>(null)
 const isAutoplayPaused = ref(false)
 const productosRelacionados = ref<Producto[]>([])
 

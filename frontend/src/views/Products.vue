@@ -141,13 +141,13 @@
                 </div>
 
                 <div class="mb-3">
-                  <span v-if="product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
-                    ${{ product.precioAnterior.toLocaleString('es-UY') }}
+                  <span v-if="product.precioAnterior && product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
+                    ${{ product.precioAnterior?.toLocaleString('es-UY') }}
                   </span>
                   <div class="flex items-center justify-between mx-3 ">
                     <div class="flex flex-col">
                       <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        ${{ parseInt(product.precioMetro.toFixed(2) * product.metrosPorCaja).toLocaleString('es-UY') }}
+                        ${{ (product.precioMetro * product.metrosPorCaja).toFixed(0) }}
                       </span>
                       <span v-if="product.precioMetro" class="text-xs text-gray-500">
                         ${{ parseInt(product.precioMetro.toFixed(2)) }}/m²
