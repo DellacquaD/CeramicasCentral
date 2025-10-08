@@ -97,10 +97,13 @@
           <div
               v-for="product in paginatedProducts"
               :key="product.id"
-              @click="goToProduct(product)"
-              class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1 group"
+              class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col"
           >
-            <div class="relative">
+            <!-- Imagen clickeable -->
+            <div
+                @click="goToProduct(product)"
+                class="relative cursor-pointer"
+            >
               <div class="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
                 <img
                     v-if="product.imagenPrincipal"
@@ -121,44 +124,60 @@
 
               <div class="absolute bottom-2 right-2">
                 <span :class="['px-2 py-1 rounded-md text-xs font-semibold', product.stock > 50 ? 'bg-green-100 text-green-800' : product.stock > 10 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800']">
-                  Stock: {{ product.stock.toFixed(2) }} {{ product.unidad }}
+                  Stock: {{ parseInt(product.stock.toFixed(2)) }} {{ product.unidad }}
                 </span>
               </div>
             </div>
 
-            <div class="p-4">
-              <p class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">{{ product.marca }}</p>
-              <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 min-h-[3rem]">{{ product.nombre }}</h3>
+            <!-- Información del producto -->
+            <div class="p-4 flex flex-col flex-grow">
+              <div @click="goToProduct(product)" class="cursor-pointer flex-grow">
+                <p class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">{{ product.marca }}</p>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 min-h-[3rem]">{{ product.nombre }}</h3>
 
-              <div class="flex items-center gap-2 mb-3 text-xs text-gray-600 dark:text-gray-400">
-                <span v-if="product.medidas" class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ product.medidas }}</span>
-                <span v-if="product.color" class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ product.color }}</span>
-              </div>
+                <div class="flex items-center gap-2 mb-3 text-xs text-gray-600 dark:text-gray-400">
+                  <span v-if="product.medidas" class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ product.medidas }}</span>
+                  <span v-if="product.color" class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{{ product.color }}</span>
+                </div>
 
-              <div class="flex items-center justify-between">
-                <div>
-                  <span v-if="product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
-                    ${{ product.precioAnterior.toLocaleString('es-UY') }}
+                <div class="mb-3">
+                  <span v-if="product.precioAnterior && product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
+                    ${{ product.precioAnterior?.toLocaleString('es-UY') }}
                   </span>
-                  <div class="flex flex-col">
-                    <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                      ${{ product.precio.toLocaleString('es-UY', { minimumFractionDigits: 2 }) }}
-                    </span>
-                    <span v-if="product.precioMetro" class="text-xs text-gray-500">
-                      ${{ product.precioMetro.toFixed(2) }}/m²
-                    </span>
+                  <div class="flex items-center justify-between mx-3 ">
+                    <div class="flex flex-col">
+                      <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        ${{ (product.precioMetro * product.metrosPorCaja).toFixed(0) }}
+                      </span>
+                      <span v-if="product.precioMetro" class="text-xs text-gray-500">
+                        ${{ parseInt(product.precioMetro.toFixed(2)) }}/m²
+                      </span>
+                    </div>
+                    <button
+                        @click.stop="addToCart(product)"
+                        class="mt-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg group"
+                    >
+                      <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5 group-hover:scale-110 transition-transform"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                      >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                <div v-if="product.pei" class="text-xs">
-                  <span class="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-semibold">
-                    PEI {{ product.pei }}
-                  </span>
+                <div v-if="product.metrosPorCaja" class="text-xs text-gray-500">
+                  📦 {{ product.metrosPorCaja }} m²/caja
                 </div>
-              </div>
-
-              <div v-if="product.metrosPorCaja" class="mt-2 text-xs text-gray-500">
-                📦 {{ product.metrosPorCaja }} m²/caja
               </div>
             </div>
           </div>
@@ -198,29 +217,74 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
+import { useCartStore } from '../stores/cart'
 
+// Interfaces
+interface ProductoAPI {
+  id: string | number
+  nombre: string
+  descripcion: string
+  marca: string
+  categoria: string
+  subcategoria?: string
+  precio?: number
+  precioMetro: number
+  precioAnterior?: number
+  metrosPorCaja: number
+  stock: number
+  unidad: string
+  medidas?: string
+  color?: string
+  pei?: number
+  imagenPrincipal?: string
+  disponible: boolean
+  activo: boolean
+  nuevo?: boolean
+  enOferta?: boolean
+  slug: string
+  tags?: string[]
+}
+
+interface CacheInfo {
+  edadEnMinutos: number
+  ultimaActualizacion: string
+}
+
+interface ApiResponse {
+  productos: ProductoAPI[]
+  cacheInfo: CacheInfo
+}
+
+// Props
+interface Props {
+  categorySlug?: string
+}
+
+const props = defineProps<Props>()
+
+// Router y Store
 const router = useRouter()
-const props = defineProps({
-  categorySlug: String
-})
+const cartStore = useCartStore()
 
-const productos = ref([])
-const loading = ref(true)
-const error = ref(null)
-const cacheInfo = ref(null)
-const searchTerm = ref('')
-const sortBy = ref('name')
-const currentPage = ref(1)
+// State
+const productos = ref<ProductoAPI[]>([])
+const loading = ref<boolean>(true)
+const error = ref<string | null>(null)
+const cacheInfo = ref<CacheInfo | null>(null)
+const searchTerm = ref<string>('')
+const sortBy = ref<string>('name')
+const currentPage = ref<number>(1)
 const itemsPerPage = 12
 
 // API URL
 const API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/products'
 
-const cargarProductos = async (forzar = false) => {
+// Methods
+const cargarProductos = async (forzar: boolean = false): Promise<void> => {
   loading.value = true
   error.value = null
 
@@ -242,7 +306,7 @@ const cargarProductos = async (forzar = false) => {
       throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
     }
 
-    const data = await response.json()
+    const data: ApiResponse = await response.json()
     console.log('Data recibida:', data)
 
     if (data.productos) {
@@ -255,13 +319,18 @@ const cargarProductos = async (forzar = false) => {
 
   } catch (err) {
     console.error('Error al cargar productos:', err)
-    error.value = err.message || 'Error desconocido al cargar productos'
+    error.value = err instanceof Error ? err.message : 'Error desconocido al cargar productos'
   } finally {
     loading.value = false
   }
 }
 
-const productosFiltradosPorCategoria = computed(() => {
+const addToCart = (product: ProductoAPI): void => {
+  cartStore.addItem(product)
+}
+
+// Computed
+const productosFiltradosPorCategoria = computed((): ProductoAPI[] => {
   if (props.categorySlug) {
     return productos.value.filter(p =>
         p.categoria.toLowerCase() === props.categorySlug?.toLowerCase() &&
@@ -272,7 +341,7 @@ const productosFiltradosPorCategoria = computed(() => {
   return productos.value.filter(p => p.disponible && p.activo)
 })
 
-const productosFiltrados = computed(() => {
+const productosFiltrados = computed((): ProductoAPI[] => {
   let result = productosFiltradosPorCategoria.value
 
   if (searchTerm.value) {
@@ -285,24 +354,33 @@ const productosFiltrados = computed(() => {
   }
 
   switch (sortBy.value) {
-    case 'price-low': result = [...result].sort((a, b) => a.precio - b.precio); break
-    case 'price-high': result = [...result].sort((a, b) => b.precio - a.precio); break
-    case 'stock': result = [...result].sort((a, b) => b.stock - a.stock); break
-    default: result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
+    case 'price-low':
+      result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
+      break
+    case 'price-high':
+      result = [...result].sort((a, b) => (b.precio || 0) - (a.precio || 0))
+      break
+    case 'stock':
+      result = [...result].sort((a, b) => b.stock - a.stock)
+      break
+    default:
+      result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
   }
 
   return result
 })
 
-const paginatedProducts = computed(() => {
+const paginatedProducts = computed((): ProductoAPI[] => {
   const start = (currentPage.value - 1) * itemsPerPage
   return productosFiltrados.value.slice(start, start + itemsPerPage)
 })
 
-const totalPages = computed(() => Math.ceil(productosFiltrados.value.length / itemsPerPage))
+const totalPages = computed((): number => {
+  return Math.ceil(productosFiltrados.value.length / itemsPerPage)
+})
 
-const displayPages = computed(() => {
-  const pages = []
+const displayPages = computed((): (number | string)[] => {
+  const pages: (number | string)[] = []
   const total = totalPages.value
   const current = currentPage.value
 
@@ -329,20 +407,43 @@ const displayPages = computed(() => {
   return pages
 })
 
-const pageTitle = computed(() => {
+const pageTitle = computed((): string => {
   if (props.categorySlug) {
-    const names = { pisos: 'Pisos', revestimientos: 'Revestimientos', cocina: 'Cocina', griferia: 'Grifería', bano: 'Baño' }
+    const names: Record<string, string> = {
+      pisos: 'Pisos',
+      revestimientos: 'Revestimientos',
+      cocina: 'Cocina',
+      griferia: 'Grifería',
+      bano: 'Baño'
+    }
     return names[props.categorySlug.toLowerCase()] || 'Productos'
   }
   return 'Todos los Productos'
 })
 
-const goToProduct = (product) => router.push(`/producto/${product.slug}`)
+const goToProduct = (product: ProductoAPI): void => {
+  console.log('Navegando a producto:', product.nombre, 'con slug:', product.slug)
+  if (!product.slug) {
+    console.error('El producto no tiene slug:', product)
+    return
+  }
+  router.push(`/producto/${product.slug}`)
+}
 
-watch(() => props.categorySlug, () => { currentPage.value = 1; searchTerm.value = '' })
-watch(searchTerm, () => currentPage.value = 1)
+// Watchers
+watch(() => props.categorySlug, () => {
+  currentPage.value = 1
+  searchTerm.value = ''
+})
 
-onMounted(() => cargarProductos())
+watch(searchTerm, () => {
+  currentPage.value = 1
+})
+
+// Lifecycle
+onMounted(() => {
+  cargarProductos()
+})
 </script>
 
 <style scoped>

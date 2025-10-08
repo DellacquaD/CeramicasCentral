@@ -5,7 +5,7 @@
         Carrito de Compras
       </h1>
 
-      <div v-if="items.length === 0" class="text-center py-16">
+      <div v-if="cartStore.isEmpty" class="text-center py-16">
         <ShoppingCartIcon class="w-24 h-24 text-gray-400 mx-auto mb-6" />
         <h2 class="text-2xl font-semibold text-gray-600 dark:text-gray-400 mb-4">
           Tu carrito está vacío
@@ -28,67 +28,86 @@
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                Productos ({{ items.length }})
+                Productos ({{ cartStore.items.length }})
               </h2>
             </div>
 
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
               <div
-                  v-for="item in items"
+                  v-for="item in cartStore.items"
                   :key="item.id"
-                  class="p-6 flex items-center space-x-4"
+                  class="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
               >
                 <img
-                    :src="item.image"
-                    :alt="item.name"
-                    class="w-20 h-20 object-cover rounded-lg"
+                    :src="item.imagenPrincipal || '/placeholder.png'"
+                    :alt="item.nombre"
+                    class="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                 />
 
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                   <h3 class="font-semibold text-gray-900 dark:text-white">
-                    {{ item.name }}
+                    {{ item.nombre }}
                   </h3>
                   <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Código: {{ item.id }}
+                    {{ item.marca }}
+                  </p>
+                  <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                    Stock disponible: {{ item.stock }} {{ item.unidad }}
                   </p>
                   <p class="text-lg font-bold text-blue-600 dark:text-blue-400 mt-2">
-                    ${{ item.price.toLocaleString() }}
+                    ${{ item.precio.toLocaleString('es-UY') }}
+                    <span v-if="item.precioMetro" class="text-xs text-gray-500 ml-1">
+                      (${{ parseInt(item.precioMetro.toFixed(2)) }}/m²)
+                    </span>
                   </p>
                 </div>
 
                 <div class="flex items-center space-x-3">
                   <button
-                      @click="$emit('update-quantity', item.id, item.quantity - 1)"
-                      class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
+                      :disabled="item.quantity <= 1"
+                      class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <MinusIcon class="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   </button>
 
-                  <span class="text-lg font-medium text-gray-900 dark:text-white w-8 text-center">
+                  <span class="text-lg font-medium text-gray-900 dark:text-white w-12 text-center">
                     {{ item.quantity }}
                   </span>
 
                   <button
-                      @click="$emit('update-quantity', item.id, item.quantity + 1)"
-                      class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
+                      :disabled="item.quantity >= item.stock"
+                      class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <PlusIcon class="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   </button>
                 </div>
 
-                <div class="text-right">
+                <div class="text-right flex-shrink-0">
                   <p class="text-lg font-bold text-gray-900 dark:text-white">
-                    ${{ (item.price * item.quantity).toLocaleString() }}
+                    ${{ (item.precio * item.quantity).toLocaleString('es-UY') }}
                   </p>
                   <button
-                      @click="$emit('remove-item', item.id)"
-                      class="text-red-500 hover:text-red-700 text-sm mt-1"
+                      @click="cartStore.removeItem(item.id)"
+                      class="text-red-500 hover:text-red-700 text-sm mt-1 flex items-center gap-1"
                   >
+                    <TrashIcon class="w-4 h-4" />
                     Eliminar
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Botón limpiar carrito -->
+          <div class="mt-4 flex justify-end">
+            <button
+                @click="handleClearCart"
+                class="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-sm font-medium"
+            >
+              Vaciar carrito
+            </button>
           </div>
         </div>
 
@@ -103,14 +122,14 @@
               <div class="flex justify-between">
                 <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  ${{ subtotal.toLocaleString() }}
+                  ${{ cartStore.totalPrice.toLocaleString('es-UY') }}
                 </span>
               </div>
 
               <div class="flex justify-between">
                 <span class="text-gray-600 dark:text-gray-400">Envío</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  {{ shipping === 0 ? 'Gratis' : `$${shipping.toLocaleString()}` }}
+                  {{ shipping === 0 ? 'Gratis' : `$${shipping.toLocaleString('es-UY')}` }}
                 </span>
               </div>
 
@@ -123,13 +142,17 @@
               <div class="flex justify-between text-lg font-bold">
                 <span class="text-gray-900 dark:text-white">Total</span>
                 <span class="text-blue-600 dark:text-blue-400">
-                  ${{ total.toLocaleString() }}
+                  ${{ total.toLocaleString('es-UY') }}
                 </span>
+              </div>
+
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                Total de artículos: {{ cartStore.itemCount }}
               </div>
             </div>
 
             <button
-                @click="$emit('checkout')"
+                @click="cartStore.checkout()"
                 class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
             >
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -137,6 +160,10 @@
               </svg>
               <span>Finalizar por WhatsApp</span>
             </button>
+
+            <p class="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
+              Al hacer clic, serás redirigido a WhatsApp con tu pedido
+            </p>
           </div>
         </div>
       </div>
@@ -144,36 +171,33 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import {
   ShoppingCartIcon,
   ArrowRightIcon,
   MinusIcon,
-  PlusIcon
+  PlusIcon,
+  TrashIcon
 } from '@heroicons/vue/24/outline'
+import { useCartStore } from '../stores/cart'
 
-// Props
-const props = defineProps({
-  items: {
-    type: Array,
-    default: () => []
-  }
-})
-
-// Emits
-defineEmits(['update-quantity', 'remove-item', 'checkout'])
+// Store
+const cartStore = useCartStore()
 
 // Computed
-const subtotal = computed(() => {
-  return props.items.reduce((total, item) => total + (item.price * item.quantity), 0)
-})
-
 const shipping = computed(() => {
-  return subtotal.value >= 5000 ? 0 : 500
+  return cartStore.totalPrice >= 5000 ? 0 : 500
 })
 
 const total = computed(() => {
-  return subtotal.value + shipping.value
+  return cartStore.totalPrice + shipping.value
 })
+
+// Methods
+const handleClearCart = () => {
+  if (confirm('¿Estás seguro de que deseas vaciar el carrito?')) {
+    cartStore.clearCart()
+  }
+}
 </script>
