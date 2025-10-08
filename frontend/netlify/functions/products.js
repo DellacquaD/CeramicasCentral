@@ -1,5 +1,5 @@
 // netlify/functions/productos.js
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbycIeVO2WOgDJ-SfWTd3jATRBZJncds8XI2RgLnRuxoCGWTy3npsJcmgwR7ZRfMDcSe4A/exec'
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwm54gDm3BjiSPUIMmDnQk4tVNmXfUAt0Ac4GNEIhtMdkhndYcdeV0ze99N3qmDzXEwSw/exec'
 
 let cache = null
 let cacheTime = null
