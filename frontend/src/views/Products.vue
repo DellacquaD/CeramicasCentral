@@ -229,7 +229,7 @@ interface ProductoAPI {
   nombre: string
   descripcion: string
   marca: string
-  categoria: string
+  categoria: string[]
   subcategoria?: string
   precio?: number
   precioMetro: number
@@ -333,7 +333,8 @@ const addToCart = (product: ProductoAPI): void => {
 const productosFiltradosPorCategoria = computed((): ProductoAPI[] => {
   if (props.categorySlug) {
     return productos.value.filter(p =>
-        p.categoria.toLowerCase() === props.categorySlug?.toLowerCase() &&
+        Array.isArray(p.categoria) &&
+        p.categoria.some(cat => cat.toLowerCase() === props.categorySlug!.toLowerCase()) &&
         p.disponible &&
         p.activo
     )
@@ -345,14 +346,30 @@ const productosFiltrados = computed((): ProductoAPI[] => {
   let result = productosFiltradosPorCategoria.value
 
   if (searchTerm.value) {
-    const term = searchTerm.value.toLowerCase()
-    result = result.filter(p =>
-        p.nombre.toLowerCase().includes(term) ||
-        p.descripcion.toLowerCase().includes(term) ||
-        p.marca.toLowerCase().includes(term)
-    )
+    const term = searchTerm.value.toLowerCase().trim()
+
+    result = result.filter(p => {
+      const nombre = p.nombre?.toLowerCase() || ''
+      const marca = p.marca?.toLowerCase() || ''
+
+      const categorias = Array.isArray(p.categoria)
+          ? p.categoria.map(c => c.toLowerCase())
+          : []
+
+      const tags = Array.isArray(p.tags)
+          ? p.tags.map(t => t.toLowerCase())
+          : []
+
+      return (
+          nombre.includes(term) ||
+          marca.includes(term) ||
+          categorias.some(cat => cat.includes(term)) ||
+          tags.some(tag => tag.includes(term))
+      )
+    })
   }
 
+  // Ordenamiento
   switch (sortBy.value) {
     case 'price-low':
       result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
@@ -369,6 +386,37 @@ const productosFiltrados = computed((): ProductoAPI[] => {
 
   return result
 })
+
+
+// const productosFiltrados = computed((): ProductoAPI[] => {
+//   let result = productosFiltradosPorCategoria.value
+//
+//   if (searchTerm.value) {
+//     const term = searchTerm.value.toLowerCase()
+//     result = result.filter(p =>
+//         p.nombre.toLowerCase().includes(term) ||
+//         p.descripcion.toLowerCase().includes(term) ||
+//         p.marca.toLowerCase().includes(term) ||
+//         (Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(term)))
+//     )
+//   }
+//
+//   switch (sortBy.value) {
+//     case 'price-low':
+//       result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
+//       break
+//     case 'price-high':
+//       result = [...result].sort((a, b) => (b.precio || 0) - (a.precio || 0))
+//       break
+//     case 'stock':
+//       result = [...result].sort((a, b) => b.stock - a.stock)
+//       break
+//     default:
+//       result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
+//   }
+//
+//   return result
+// })
 
 const paginatedProducts = computed((): ProductoAPI[] => {
   const start = (currentPage.value - 1) * itemsPerPage

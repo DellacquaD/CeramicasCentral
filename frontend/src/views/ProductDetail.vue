@@ -42,7 +42,7 @@
             </li>
             <ChevronRightIcon class="w-4 h-4 text-gray-400" />
             <li>
-              <router-link :to="`/categoria/${producto.categoria.toLowerCase()}`" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+              <router-link :to="`/categoria/${producto.categoria[0]?.toLowerCase()}`" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">
                 {{ producto.categoria }}
               </router-link>
             </li>
