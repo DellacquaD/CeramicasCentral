@@ -192,14 +192,13 @@
             </div>
 
             <!-- Price -->
-            <div class="border-t border-b border-gray-200 dark:border-gray-700 py-4 flex justify-around items-center">
+            <div class="border-t border-b border-gray-200 dark:border-gray-700 py-4">
               <div class="flex items-baseline gap-3 mb-2">
-                <span v-if="producto.precioAnterior > 0" class="text-xl text-gray-500 line-through">
+                <span v-if="producto.precioAnterior && producto.precioAnterior > 0" class="text-xl text-gray-500 line-through">
                   ${{ producto.precioAnterior.toLocaleString('es-UY') }}
                 </span>
                 <span class="text-4xl font-bold text-blue-600 dark:text-blue-400">
                   ${{ precioTotal.toLocaleString('es-UY') }}
-                  <span class="text-2xl">/caja</span>
                 </span>
               </div>
               <div class="text-sm text-gray-600 dark:text-gray-400">
@@ -210,9 +209,9 @@
 
             <!-- Quantity Selector -->
             <div class="space-y-4">
-              <div class="flex items-center gap-4 flex-col">
+              <div class="flex items-center gap-4">
                 <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Cantidad:</label>
-                <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lgs">
+                <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
                   <button
                       @click="decrementQuantity"
                       :disabled="quantity <= 1"
@@ -319,7 +318,7 @@
                 <p class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">{{ relatedProduct.marca }}</p>
                 <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">{{ relatedProduct.nombre }}</h3>
                 <p class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  ${{ parseInt(relatedProduct.precioMetro.toFixed(2) * relatedProduct.metrosPorCaja).toLocaleString('es-UY') }}
+                  ${{ ((relatedProduct.precioMetro * relatedProduct.metrosPorCaja)).toFixed(0) }}
                 </p>
               </div>
             </div>
@@ -377,7 +376,7 @@ const error = ref<string | null>(null)
 const quantity = ref(1)
 const imagenActualIndex = ref(0)
 const thumbnailStartIndex = ref(0)
-const autoplayInterval = ref<NodeJS.Timeout | null>(null)
+const autoplayInterval = ref<number | null>(null)
 const isAutoplayPaused = ref(false)
 const productosRelacionados = ref<Producto[]>([])
 

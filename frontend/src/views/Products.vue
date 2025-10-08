@@ -141,37 +141,21 @@
                 </div>
 
                 <div class="mb-3">
-                  <span v-if="product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
+                  <span v-if="product.precioAnterior && product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
                     ${{ product.precioAnterior.toLocaleString('es-UY') }}
                   </span>
-                  <div class="flex items-center justify-between mx-3 ">
+                  <div class="flex items-center justify-between">
                     <div class="flex flex-col">
                       <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        ${{ parseInt(product.precioMetro.toFixed(2) * product.metrosPorCaja).toLocaleString('es-UY') }}
+                        ${{ (product.precioMetro * product.metrosPorCaja).toFixed(0) }}
                       </span>
                       <span v-if="product.precioMetro" class="text-xs text-gray-500">
                         ${{ parseInt(product.precioMetro.toFixed(2)) }}/m²
                       </span>
                     </div>
-                    <button
-                        @click.stop="addToCart(product)"
-                        class="mt-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg group"
-                    >
-                      <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-5 w-5 group-hover:scale-110 transition-transform"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                      >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                    </button>
+                    <span v-if="product.pei" class="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded font-semibold">
+                      PEI {{ product.pei }}
+                    </span>
                   </div>
                 </div>
 
@@ -179,6 +163,28 @@
                   📦 {{ product.metrosPorCaja }} m²/caja
                 </div>
               </div>
+
+              <!-- Botón de agregar al carrito -->
+              <button
+                  @click.stop="addToCart(product)"
+                  class="mt-4 w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg group"
+              >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5 group-hover:scale-110 transition-transform"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                  <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>Agregar al carrito</span>
+              </button>
             </div>
           </div>
         </div>
@@ -246,7 +252,6 @@ interface ProductoAPI {
   nuevo?: boolean
   enOferta?: boolean
   slug: string
-  tags?: string[]
 }
 
 interface CacheInfo {

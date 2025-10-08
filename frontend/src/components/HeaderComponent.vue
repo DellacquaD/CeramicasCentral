@@ -152,12 +152,11 @@ const navigationItems = ref([
   { name: 'Contacto', path: '/contacto' }
 ])
 
-// Mobile menu state
 const showMobileMenu = ref(false)
-
-const toggleMobileMenu = () => {
-  showMobileMenu.value = !showMobileMenu.value
-}
+//
+// const toggleMobileMenu = () => {
+//   showMobileMenu.value = !showMobileMenu.value
+// }
 
 const closeMobileMenu = () => {
   showMobileMenu.value = false
