@@ -50,9 +50,26 @@
               <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 {{ pageTitle }}
               </h1>
-              <p class="text-gray-600 dark:text-gray-400">
-                {{ productosFiltrados.length }} productos encontrados
-              </p>
+
+              <!-- Indicador de cotización -->
+              <div class="flex items-center gap-4">
+                <p class="text-gray-600 dark:text-gray-400">
+                  {{ productosFiltrados.length }} productos encontrados
+                </p>
+
+                <div v-if="!cotizacionCargando && cotizacionUSD"
+                     class="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg">
+                  <span class="text-gray-600 dark:text-gray-400">
+                    💵 Dólar:
+                  </span>
+                  <span class="font-semibold text-blue-600 dark:text-blue-400">
+                    ${{ cotizacionUSD.toFixed(2) }} UYU
+                  </span>
+                  <span class="text-xs text-gray-500">
+                    ({{ getInfo()?.fecha }})
+                  </span>
+                </div>
+              </div>
             </div>
 
             <!-- Cache Info -->
@@ -95,7 +112,7 @@
         <!-- Products grid -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           <div
-              v-for="product in paginatedProducts"
+              v-for="product in paginatedProductsConPrecios"
               :key="product.id"
               class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col"
           >
@@ -141,18 +158,33 @@
                 </div>
 
                 <div class="mb-3">
-                  <span v-if="product.precioAnterior && product.precioAnterior > 0" class="text-sm text-gray-500 line-through mr-2">
-                    ${{ product.precioAnterior?.toLocaleString('es-UY') }}
+                  <!-- Precio anterior si existe -->
+                  <span v-if="product.precioAnterior && product.precioAnterior > 0"
+                        class="text-sm text-gray-500 line-through mr-2">
+                    ${{ formatearPrecio(product.precioAnterior * cotizacionUSD) }}
                   </span>
-                  <div class="flex items-center justify-between mx-3 ">
+
+                  <div class="flex items-center justify-between mx-3">
                     <div class="flex flex-col">
-                      <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        ${{ (product.precioMetro * product.metrosPorCaja).toFixed(0) }}
-                      </span>
+                      <!-- PRECIO EN PESOS URUGUAYOS -->
+                      <div class="flex items-baseline gap-1">
+                        <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
+                          ${{ formatearPrecio(product.precioUYU) }}
+                        </span>
+                        <span class="text-xs text-gray-500">UYU</span>
+                      </div>
+
+                      <!-- Precio por metro cuadrado -->
                       <span v-if="product.precioMetro" class="text-xs text-gray-500">
-                        ${{ parseInt(product.precioMetro.toFixed(2)) }}/m²
+                        ${{ formatearPrecio(product.precioMetroUYU) }}/m²
+                      </span>
+
+                      <!-- Precio en USD (referencia) -->
+                      <span class="text-xs text-gray-400 mt-1">
+                        US$ {{ (product.precioMetro * product.metrosPorCaja).toFixed(2) }}
                       </span>
                     </div>
+
                     <button
                         @click.stop="addToCart(product)"
                         class="mt-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg group"
@@ -222,6 +254,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
 import { useCartStore } from '../stores/cart'
+import { useCotizacion } from '../services/cotizacionService'
 
 // Interfaces
 interface ProductoAPI {
@@ -249,6 +282,11 @@ interface ProductoAPI {
   tags?: string[]
 }
 
+interface ProductoConPrecioUYU extends ProductoAPI {
+  precioUYU: number
+  precioMetroUYU: number
+}
+
 interface CacheInfo {
   edadEnMinutos: number
   ultimaActualizacion: string
@@ -270,6 +308,11 @@ const props = defineProps<Props>()
 const router = useRouter()
 const cartStore = useCartStore()
 
+// Cotización
+const cotizacionUSD = ref<number>(42)
+const cotizacionCargando = ref<boolean>(true)
+const { obtenerCotizacion, getInfo } = useCotizacion()
+
 // State
 const productos = ref<ProductoAPI[]>([])
 const loading = ref<boolean>(true)
@@ -284,6 +327,22 @@ const itemsPerPage = 12
 const API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/products'
 
 // Methods
+const cargarCotizacion = async (): Promise<void> => {
+  try {
+    cotizacionCargando.value = true
+    console.log('🔄 Cargando cotización del dólar...')
+
+    const valor = await obtenerCotizacion()
+    cotizacionUSD.value = valor
+
+    console.log('✅ Cotización cargada:', valor)
+  } catch (error) {
+    console.error('❌ Error al cargar cotización:', error)
+  } finally {
+    cotizacionCargando.value = false
+  }
+}
+
 const cargarProductos = async (forzar: boolean = false): Promise<void> => {
   loading.value = true
   error.value = null
@@ -327,6 +386,19 @@ const cargarProductos = async (forzar: boolean = false): Promise<void> => {
 
 const addToCart = (product: ProductoAPI): void => {
   cartStore.addItem(product)
+}
+
+const formatearPrecio = (precio: number): string => {
+  return Math.round(precio).toLocaleString('es-UY')
+}
+
+const goToProduct = (product: ProductoAPI): void => {
+  console.log('Navegando a producto:', product.nombre, 'con slug:', product.slug)
+  if (!product.slug) {
+    console.error('El producto no tiene slug:', product)
+    return
+  }
+  router.push(`/producto/${product.slug}`)
 }
 
 // Computed
@@ -387,40 +459,17 @@ const productosFiltrados = computed((): ProductoAPI[] => {
   return result
 })
 
+const productosConPreciosUYU = computed((): ProductoConPrecioUYU[] => {
+  return productosFiltrados.value.map(producto => ({
+    ...producto,
+    precioUYU: (producto.precioMetro * producto.metrosPorCaja * cotizacionUSD.value),
+    precioMetroUYU: (producto.precioMetro * cotizacionUSD.value)
+  }))
+})
 
-// const productosFiltrados = computed((): ProductoAPI[] => {
-//   let result = productosFiltradosPorCategoria.value
-//
-//   if (searchTerm.value) {
-//     const term = searchTerm.value.toLowerCase()
-//     result = result.filter(p =>
-//         p.nombre.toLowerCase().includes(term) ||
-//         p.descripcion.toLowerCase().includes(term) ||
-//         p.marca.toLowerCase().includes(term) ||
-//         (Array.isArray(p.tags) && p.tags.some(tag => tag.toLowerCase().includes(term)))
-//     )
-//   }
-//
-//   switch (sortBy.value) {
-//     case 'price-low':
-//       result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
-//       break
-//     case 'price-high':
-//       result = [...result].sort((a, b) => (b.precio || 0) - (a.precio || 0))
-//       break
-//     case 'stock':
-//       result = [...result].sort((a, b) => b.stock - a.stock)
-//       break
-//     default:
-//       result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
-//   }
-//
-//   return result
-// })
-
-const paginatedProducts = computed((): ProductoAPI[] => {
+const paginatedProductsConPrecios = computed((): ProductoConPrecioUYU[] => {
   const start = (currentPage.value - 1) * itemsPerPage
-  return productosFiltrados.value.slice(start, start + itemsPerPage)
+  return productosConPreciosUYU.value.slice(start, start + itemsPerPage)
 })
 
 const totalPages = computed((): number => {
@@ -469,15 +518,6 @@ const pageTitle = computed((): string => {
   return 'Todos los Productos'
 })
 
-const goToProduct = (product: ProductoAPI): void => {
-  console.log('Navegando a producto:', product.nombre, 'con slug:', product.slug)
-  if (!product.slug) {
-    console.error('El producto no tiene slug:', product)
-    return
-  }
-  router.push(`/producto/${product.slug}`)
-}
-
 // Watchers
 watch(() => props.categorySlug, () => {
   currentPage.value = 1
@@ -489,8 +529,11 @@ watch(searchTerm, () => {
 })
 
 // Lifecycle
-onMounted(() => {
-  cargarProductos()
+onMounted(async () => {
+  await Promise.all([
+    cargarProductos(),
+    cargarCotizacion()
+  ])
 })
 </script>
 
