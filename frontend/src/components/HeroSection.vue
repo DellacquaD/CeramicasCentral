@@ -32,7 +32,7 @@
     </transition>
 
     <!-- Main Slider -->
-    <div v-show="!isLoading" class="relative h-[350px] sm:h-[400px] lg:h-[450px]">
+    <div v-show="!isLoading" class="absolute inset-0">
       <!-- Slides -->
       <transition-group name="fade">
         <div
@@ -42,7 +42,7 @@
             class="absolute inset-0"
         >
           <!-- Grid de 2 productos -->
-          <div class="relative h-full grid grid-cols-2">
+          <div v-if="slide.left && slide.right" class="relative h-full grid grid-cols-2">
             <!-- Producto Izquierdo -->
             <div class="relative overflow-hidden">
               <div class="absolute inset-0">
@@ -166,7 +166,7 @@
       <!-- Dots Navigation -->
       <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         <button
-            v-for="(slide, index) in slides"
+            v-for="(_slide, index) in slides"
             :key="`dot-${index}`"
             @click="goToSlide(index)"
             :class="[
@@ -207,7 +207,7 @@ const slides = computed(() => {
     productos.push(...adicionales)
   }
 
-  const slidesArray = []
+  const slidesArray: Array<{ left: any; right: any }> = []
   for (let i = 0; i < productos.length; i += 2) {
     if (productos[i] && productos[i + 1]) {
       slidesArray.push({
@@ -295,7 +295,7 @@ onMounted(async () => {
         startAutoplay()
       }, 100)
     }
-  }, 1500) // 👈 CAMBIA ESTE NÚMERO para ajustar el tiempo (en milisegundos)
+  }, 3000) // 👈 CAMBIA ESTE NÚMERO para ajustar el tiempo (en milisegundos)
 })
 
 onUnmounted(() => {
