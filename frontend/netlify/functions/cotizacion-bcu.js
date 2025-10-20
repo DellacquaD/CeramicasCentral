@@ -8,6 +8,60 @@ let cotizacionCache = null;
 let ultimaActualizacion = null;
 
 /**
+ * Feriados fijos de Uruguay (mes-día)
+ * Lista simplificada de los principales feriados
+ */
+const FERIADOS_FIJOS = [
+    '01-01', // Año Nuevo
+    '05-01', // Día del Trabajador
+    '07-18', // Jura de la Constitución
+    '08-25', // Declaratoria de la Independencia
+    '12-25', // Navidad
+];
+
+/**
+ * Verifica si una fecha es feriado
+ */
+function esFeriado(fecha) {
+    const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+    return FERIADOS_FIJOS.includes(mesdia);
+}
+
+/**
+ * Obtiene la fecha del último día hábil
+ * Considera fines de semana y feriados
+ */
+function obtenerUltimoDiaHabil() {
+    const fecha = new Date();
+
+    // Ajustar a timezone de Uruguay (UTC-3)
+    fecha.setHours(fecha.getHours() - 3);
+
+    let intentos = 0;
+    const MAX_INTENTOS = 10; // Máximo retroceder 10 días
+
+    // Buscar el último día hábil
+    while (intentos < MAX_INTENTOS) {
+        const diaSemana = fecha.getDay(); // 0 = Domingo, 6 = Sábado
+
+        // Si es día de semana (lunes a viernes) y no es feriado
+        if (diaSemana >= 1 && diaSemana <= 5 && !esFeriado(fecha)) {
+            const fechaStr = fecha.toISOString().split('T')[0];
+            console.log(`📅 Último día hábil encontrado: ${fechaStr} (día de semana: ${diaSemana})`);
+            return fechaStr;
+        }
+
+        // Retroceder un día
+        fecha.setDate(fecha.getDate() - 1);
+        intentos++;
+    }
+
+    // Fallback: si no encontramos un día hábil en 10 días, usar fecha actual
+    console.warn('⚠️ No se encontró día hábil reciente, usando fecha actual');
+    return new Date().toISOString().split('T')[0];
+}
+
+/**
  * Construye el XML SOAP para consultar al BCU
  */
 function buildSoapBody(fecha) {
@@ -50,7 +104,7 @@ async function consultarBCU(fecha) {
     console.log(`🔄 Consultando cotización al BCU para ${fecha}...`);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
         const response = await fetch(BCU_URL, {
@@ -70,11 +124,22 @@ async function consultarBCU(fecha) {
         }
 
         const xmlText = await response.text();
-        console.log('📄 Respuesta XML recibida (primeros 500 chars):', xmlText.substring(0, 500));
+
+        // Verificar si hay datos en la respuesta
+        if (!xmlText.includes('<TCV>')) {
+            console.warn(`⚠️ No hay cotización disponible para ${fecha}, intentando con día anterior`);
+
+            // Intentar con el día anterior
+            const fechaAnterior = new Date(fecha);
+            fechaAnterior.setDate(fechaAnterior.getDate() - 1);
+            const fechaAnteriorStr = fechaAnterior.toISOString().split('T')[0];
+
+            return consultarBCU(fechaAnteriorStr);
+        }
 
         const valor = parseValorDolar(xmlText);
 
-        console.log(`✅ Cotización obtenida: ${valor}`);
+        console.log(`✅ Cotización obtenida: $${valor}`);
         return valor;
 
     } catch (error) {
@@ -97,29 +162,17 @@ function cacheValido() {
 }
 
 /**
- * Obtiene la fecha actual en formato YYYY-MM-DD
- */
-function obtenerFechaHoy() {
-    const fecha = new Date();
-    // Ajustar a timezone de Uruguay (UTC-3)
-    fecha.setHours(fecha.getHours() - 3);
-    return fecha.toISOString().split('T')[0];
-}
-
-/**
  * Handler principal de Netlify
  */
 exports.handler = async (event) => {
-    // Headers CORS y JSON
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=86400' // Cache de 24 horas en CDN
+        'Cache-Control': 'public, max-age=86400'
     };
 
-    // Manejar OPTIONS para CORS
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -128,7 +181,6 @@ exports.handler = async (event) => {
         };
     }
 
-    // Solo permitir GET
     if (event.httpMethod !== 'GET') {
         return {
             statusCode: 405,
@@ -143,17 +195,17 @@ exports.handler = async (event) => {
     try {
         console.log('📨 Solicitud recibida para cotización BCU');
 
-        // Verificar si necesitamos actualizar
         const forzarActualizacion = event.queryStringParameters?.forzar === 'true';
 
         if (forzarActualizacion || !cacheValido()) {
             console.log('🔄 Actualizando cotización...');
 
-            // Consultar al BCU
-            const fecha = obtenerFechaHoy();
+            // Obtener el último día hábil
+            const fecha = obtenerUltimoDiaHabil();
+            console.log(`📅 Consultando cotización para día hábil: ${fecha}`);
+
             const valor = await consultarBCU(fecha);
 
-            // Actualizar cache
             cotizacionCache = {
                 valor,
                 fecha,
@@ -166,7 +218,6 @@ exports.handler = async (event) => {
             console.log('📊 Usando cotización del cache');
         }
 
-        // Retornar respuesta JSON
         const responseBody = {
             success: true,
             cotizacion: cotizacionCache.valor,
@@ -188,7 +239,6 @@ exports.handler = async (event) => {
         console.error('❌ Error en cotizacion-bcu:', error.message);
         console.error('Stack:', error.stack);
 
-        // Si hay un valor en cache, usarlo como fallback
         if (cotizacionCache) {
             console.log('⚠️ Usando cotización del cache como fallback');
             return {
@@ -206,7 +256,6 @@ exports.handler = async (event) => {
             };
         }
 
-        // Si no hay cache, retornar error
         return {
             statusCode: 503,
             headers,

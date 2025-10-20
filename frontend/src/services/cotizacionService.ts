@@ -17,7 +17,7 @@ interface CotizacionResponse {
 
 class CotizacionService {
     private readonly STORAGE_KEY = 'cotizacion_bcu';
-    private readonly API_URL = '/.netlify/functions/cotizacion-bcu';
+    private readonly API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/cotizacion-bcu';
     private cotizacion: CotizacionData | null = null;
 
     constructor() {
