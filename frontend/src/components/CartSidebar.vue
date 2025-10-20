@@ -11,9 +11,16 @@
     <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-300 flex flex-col">
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Carrito ({{ cartStore.items.length }})
-        </h2>
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Carrito ({{ cartStore.items.length }})
+          </h2>
+          <!-- Indicador de cotización compacto -->
+          <div v-if="!cotizacionCargando && cotizacionUSD"
+               class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            💵 Dólar: ${{ cotizacionUSD.toFixed(2) }}
+          </div>
+        </div>
         <button
             @click="$emit('close')"
             class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -37,9 +44,9 @@
 
         <div v-else class="space-y-4">
           <div
-              v-for="item in cartStore.items"
+              v-for="item in itemsConPreciosUYU"
               :key="item.id"
-              class="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl"
+              class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl"
           >
             <img
                 :src="item.imagenPrincipal || '/placeholder.png'"
@@ -47,35 +54,65 @@
                 class="w-16 h-16 object-cover rounded-lg flex-shrink-0"
             />
             <div class="flex-1 min-w-0">
-              <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ item.nombre }}</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.marca }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                {{ formatPrice(item.precio) }}
-              </p>
-              <div class="flex items-center mt-2">
+              <h3 class="font-medium text-gray-900 dark:text-white text-sm">
+                {{ item.nombre }}
+              </h3>
+
+              <!-- Precios en UYU y USD -->
+              <div class="mt-1">
+                <p class="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                  ${{ formatearPrecio(item.precioCaja) }} 📦
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  ${{ formatearPrecio(item.precioMetro) }}/m²
+                </p>
+              </div>
+
+              <!-- Cantidad y controles -->
+              <div class="flex items-center justify-between mt-2">
+                <div class="flex items-center space-x-2">
+                  <button
+                      @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
+                      :disabled="item.quantity <= 1"
+                      class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <MinusIcon class="w-4 h-4" />
+                  </button>
+                  <span class="font-medium text-sm">{{ item.quantity }}</span>
+                  <button
+                      @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
+                      :disabled="item.quantity >= item.stock"
+                      class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <PlusIcon class="w-4 h-4" />
+                  </button>
+                </div>
+
                 <button
-                    @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
-                    :disabled="item.quantity <= 1"
-                    class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    @click="cartStore.removeItem(item.id)"
+                    class="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                 >
-                  <MinusIcon class="w-4 h-4" />
-                </button>
-                <span class="mx-3 font-medium">{{ item.quantity }}</span>
-                <button
-                    @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
-                    :disabled="item.quantity >= item.stock"
-                    class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <PlusIcon class="w-4 h-4" />
+                  <TrashIcon class="w-4 h-4" />
                 </button>
               </div>
+
+              <!-- Subtotal y metros -->
+              <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ (item.metrosPorCaja * item.quantity).toFixed(2) }} m²
+                  </span>
+                  <div class="text-right">
+                    <p class="text-sm font-bold text-gray-900 dark:text-white">
+                      ${{ formatearPrecio(item.subtotalUYU) }}
+                    </p>
+                    <p class="text-xs text-gray-400">
+                      US$ {{ (item.precio * item.quantity).toFixed(2) }}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-                @click="cartStore.removeItem(item.id)"
-                class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex-shrink-0"
-            >
-              <TrashIcon class="w-5 h-5" />
-            </button>
           </div>
         </div>
       </div>
@@ -83,17 +120,52 @@
       <!-- Footer with total and checkout -->
       <div v-if="!cartStore.isEmpty" class="border-t border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
         <div class="space-y-3 mb-4">
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-600 dark:text-gray-400">Subtotal:</span>
-            <span class="font-medium text-gray-900 dark:text-white">{{ formatPrice(cartStore.totalPrice) }}</span>
+          <!-- Subtotal -->
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Subtotal:</span>
+            <div class="text-right">
+              <p class="font-medium text-gray-900 dark:text-white">
+                ${{ formatearPrecio(totalPrecioUYU) }}
+              </p>
+              <p class="text-xs text-gray-400">
+                US$ {{ cartStore.totalPrice.toFixed(2) }}
+              </p>
+            </div>
           </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-600 dark:text-gray-400">Artículos:</span>
-            <span class="font-medium text-gray-900 dark:text-white">{{ cartStore.itemCount }}</span>
+
+          <!-- Envío -->
+          <div class="flex justify-between">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Envío:</span>
+            <div class="text-right">
+              <p class="font-medium text-gray-900 dark:text-white">
+                {{ shippingUYU === 0 ? 'Gratis' : `$${formatearPrecio(shippingUYU)}` }}
+              </p>
+              <p v-if="shippingUYU > 0" class="text-xs text-gray-400">
+                US$ {{ shipping.toFixed(2) }}
+              </p>
+            </div>
           </div>
-          <div class="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
+
+          <!-- Mensaje envío gratis -->
+          <div v-if="shippingUYU === 0" class="text-xs text-green-600 dark:text-green-400">
+            ¡Envío gratis! 🎉
+          </div>
+
+          <!-- Total -->
+          <div class="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
             <span class="text-lg font-medium text-gray-900 dark:text-white">Total:</span>
-            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ formatPrice(total) }}</span>
+            <div class="text-right">
+              <p class="text-xl font-bold text-blue-600 dark:text-blue-400">
+                ${{ formatearPrecio(totalUYU) }}
+              </p>
+              <p class="text-xs text-gray-400">
+                US$ {{ total.toFixed(2) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
+            {{ cartStore.itemCount }} artículo{{ cartStore.itemCount !== 1 ? 's' : '' }}
           </div>
         </div>
 
@@ -122,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   XMarkIcon,
   ShoppingCartIcon,
@@ -131,15 +203,7 @@ import {
   TrashIcon
 } from '@heroicons/vue/24/outline'
 import { useCartStore } from '../stores/cart'
-
-// Props
-interface Props {
-  currency?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  currency: 'UYU'
-})
+import { useCotizacion } from '../services/cotizacionService'
 
 // Emits
 const emit = defineEmits<{
@@ -149,23 +213,76 @@ const emit = defineEmits<{
 // Store
 const cartStore = useCartStore()
 
-// Computed
-const shipping = computed(() => {
-  return cartStore.totalPrice >= 5000 ? 0 : 500
+// Cotización
+const cotizacionUSD = ref<number>(42)
+const cotizacionCargando = ref<boolean>(true)
+const { obtenerCotizacion } = useCotizacion()
+
+// Cargar cotización
+const cargarCotizacion = async (): Promise<void> => {
+  try {
+    cotizacionCargando.value = true
+    const valor = await obtenerCotizacion()
+    cotizacionUSD.value = valor
+    console.log('✅ Cotización cargada en sidebar:', valor)
+  } catch (error) {
+    console.error('❌ Error al cargar cotización:', error)
+  } finally {
+    cotizacionCargando.value = false
+  }
+}
+
+// Función para formatear precios
+const formatearPrecio = (precio: number): string => {
+  return Math.round(precio).toLocaleString('es-UY')
+}
+
+// Computed - Items con precios en UYU
+const itemsConPreciosUYU = computed(() => {
+  return cartStore.items.map(item => ({
+    ...item,
+    precioCaja: item.precio * item.metrosPorCaja * cotizacionUSD.value,
+    precioMetro: item.precio * cotizacionUSD.value,
+    subtotalUYU: item.precio * item.metrosPorCaja * item.quantity * cotizacionUSD.value
+  }))
 })
 
+// Computed - Total en UYU
+const totalPrecioUYU = computed(() => {
+  return cartStore.totalPrice * cotizacionUSD.value
+})
+
+// Umbral de envío gratis en USD
+const shippingThreshold = 5000
+
+// Envío en USD
+const shipping = computed(() => {
+  return cartStore.totalPrice >= shippingThreshold ? 0 : 20
+})
+
+// Envío en UYU
+const shippingUYU = computed(() => {
+  return shipping.value * cotizacionUSD.value
+})
+
+// Total en USD
 const total = computed(() => {
   return cartStore.totalPrice + shipping.value
 })
 
-const formatPrice = (price: number): string => {
-  const symbol = props.currency === 'USD' ? 'US$' : '$'
-  return `${symbol} ${price.toLocaleString('es-UY')}`
-}
+// Total en UYU
+const totalUYU = computed(() => {
+  return totalPrecioUYU.value + shippingUYU.value
+})
 
 // Methods
 const handleCheckout = () => {
   cartStore.checkout()
   emit('close')
 }
+
+// Lifecycle
+onMounted(() => {
+  cargarCotizacion()
+})
 </script>

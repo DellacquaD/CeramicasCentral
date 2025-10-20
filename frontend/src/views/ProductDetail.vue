@@ -198,12 +198,12 @@
                   ${{ producto.precioAnterior?.toLocaleString('es-UY') }}
                 </span>
                 <span class="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                  ${{ precioTotal.toLocaleString('es-UY') }}
+                  ${{ formatearPrecio(precioTotalUYU) }}
                   <span class="text-2xl">/caja</span>
                 </span>
               </div>
               <div class="text-sm text-gray-600 dark:text-gray-400">
-                <p>${{ parseInt(producto.precioMetro.toFixed(2)) }}/m²</p>
+                <p>${{ formatearPrecio(precioMetroUYU) }}/m²</p>
                 <p v-if="producto.metrosPorCaja">{{ producto.metrosPorCaja }} m²/caja</p>
               </div>
             </div>
@@ -335,6 +335,7 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronRightIcon, ShoppingCartIcon, MinusIcon, PlusIcon } from '@heroicons/vue/24/outline'
 import { useCartStore } from '../stores/cart'
+import { useCotizacion } from '../services/cotizacionService'
 
 interface Producto {
   id: string | number
@@ -371,6 +372,10 @@ const route = useRoute()
 const router = useRouter()
 const cartStore = useCartStore()
 
+const cotizacionUSD = ref<number>(42)
+const cotizacionCargando = ref<boolean>(true)
+const { obtenerCotizacion, getInfo } = useCotizacion()
+
 const producto = ref<Producto | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -385,6 +390,24 @@ const API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/product
 
 const THUMBNAIL_MAX_VISIBLE = 6
 const AUTOPLAY_DELAY = 4000 // 4 segundos
+
+const cargarCotizacion = async (): Promise<void> => {
+  try {
+    cotizacionCargando.value = true
+    const valor = await obtenerCotizacion()
+    cotizacionUSD.value = valor
+    console.log('✅ Cotización cargada en detalle:', valor)
+  } catch (error) {
+    console.error('❌ Error al cargar cotización:', error)
+  } finally {
+    cotizacionCargando.value = false
+  }
+}
+
+const formatearPrecio = (precio: number): string => {
+  return Math.round(precio).toLocaleString('es-UY')
+}
+
 
 const todasLasImagenes = computed(() => {
   if (!producto.value) return []
@@ -428,6 +451,15 @@ const thumbnailRealIndex = (visibleIndex: number) => {
 const precioTotal = computed(() => {
   if (!producto.value) return 0
   return parseInt((producto.value.precioMetro * producto.value.metrosPorCaja).toFixed(2))
+})
+
+const precioTotalUYU = computed(() => {
+  return precioTotal.value * cotizacionUSD.value
+})
+
+const precioMetroUYU = computed(() => {
+  if (!producto.value) return 0
+  return producto.value.precioMetro * cotizacionUSD.value
 })
 
 const stockBadgeClass = computed(() => {
@@ -625,8 +657,11 @@ watch(() => route.params.productSlug, () => {  // ← Cambiado de slug a product
   }
 })
 
-onMounted(() => {
-  cargarProducto()
+onMounted(async () => {
+  await Promise.all([
+    cargarProducto(),
+    cargarCotizacion()
+  ])
 })
 
 onUnmounted(() => {

@@ -54,30 +54,9 @@
               <!-- Indicador de cotización -->
               <div class="flex items-center gap-4">
                 <p class="text-gray-600 dark:text-gray-400">
-                  {{ productosFiltrados.length }} productos encontrados
+                  {{ productosFiltrados.length }} productos
                 </p>
-
-                <div v-if="!cotizacionCargando && cotizacionUSD"
-                     class="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg">
-                  <span class="text-gray-600 dark:text-gray-400">
-                    💵 Dólar:
-                  </span>
-                  <span class="font-semibold text-blue-600 dark:text-blue-400">
-                    ${{ cotizacionUSD.toFixed(2) }} UYU
-                  </span>
-                  <span class="text-xs text-gray-500">
-                    ({{ getInfo()?.fecha }})
-                  </span>
-                </div>
               </div>
-            </div>
-
-            <!-- Cache Info -->
-            <div v-if="cacheInfo" class="text-xs text-gray-500 dark:text-gray-400 text-right">
-              <p>Actualizado hace {{ cacheInfo.edadEnMinutos || 0 }} min</p>
-              <button @click="cargarProductos(true)" class="text-blue-600 dark:text-blue-400 hover:underline">
-                Refrescar
-              </button>
             </div>
           </div>
         </div>
@@ -171,18 +150,18 @@
                         <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
                           ${{ formatearPrecio(product.precioUYU) }}
                         </span>
-                        <span class="text-xs text-gray-500">UYU</span>
+                        <span class="text-sm text-gray-500">caja</span>
                       </div>
 
                       <!-- Precio por metro cuadrado -->
-                      <span v-if="product.precioMetro" class="text-xs text-gray-500">
-                        ${{ formatearPrecio(product.precioMetroUYU) }}/m²
+                      <span v-if="product.precioMetro" class="text-sm text-gray-500">
+                        ${{ formatearPrecio(product.precioMetroUYU) }} m²
                       </span>
 
                       <!-- Precio en USD (referencia) -->
-                      <span class="text-xs text-gray-400 mt-1">
-                        US$ {{ (product.precioMetro * product.metrosPorCaja).toFixed(2) }}
-                      </span>
+<!--                      <span class="text-xs text-gray-400 mt-1">-->
+<!--                        US$ {{ (product.precioMetro * product.metrosPorCaja).toFixed(2) }}-->
+<!--                      </span>-->
                     </div>
 
                     <button

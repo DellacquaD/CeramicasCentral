@@ -34,8 +34,10 @@ function buildSoapBody(fecha) {
  * Extrae el valor TCV del XML de respuesta
  */
 function parseValorDolar(xmlString) {
+    // Buscar el valor TCV en el XML
     const match = xmlString.match(/<TCV>([\d.]+)<\/TCV>/);
     if (!match) {
+        console.error('No se encontró TCV en el XML');
         throw new Error('No se encontró la cotización en la respuesta del BCU');
     }
     return parseFloat(match[1]);
@@ -68,9 +70,11 @@ async function consultarBCU(fecha) {
         }
 
         const xmlText = await response.text();
+        console.log('📄 Respuesta XML recibida (primeros 500 chars):', xmlText.substring(0, 500));
+
         const valor = parseValorDolar(xmlText);
 
-        console.log(`✅ Cotización obtenida: $${valor}`);
+        console.log(`✅ Cotización obtenida: ${valor}`);
         return valor;
 
     } catch (error) {
@@ -106,22 +110,45 @@ function obtenerFechaHoy() {
  * Handler principal de Netlify
  */
 exports.handler = async (event) => {
+    // Headers CORS y JSON
     const headers = {
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=86400' // Cache de 24 horas en CDN
     };
 
     // Manejar OPTIONS para CORS
     if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
+        return {
+            statusCode: 200,
+            headers,
+            body: ''
+        };
+    }
+
+    // Solo permitir GET
+    if (event.httpMethod !== 'GET') {
+        return {
+            statusCode: 405,
+            headers,
+            body: JSON.stringify({
+                success: false,
+                error: 'Método no permitido. Use GET.'
+            })
+        };
     }
 
     try {
+        console.log('📨 Solicitud recibida para cotización BCU');
+
         // Verificar si necesitamos actualizar
         const forzarActualizacion = event.queryStringParameters?.forzar === 'true';
 
         if (forzarActualizacion || !cacheValido()) {
+            console.log('🔄 Actualizando cotización...');
+
             // Consultar al BCU
             const fecha = obtenerFechaHoy();
             const valor = await consultarBCU(fecha);
@@ -139,22 +166,27 @@ exports.handler = async (event) => {
             console.log('📊 Usando cotización del cache');
         }
 
-        // Retornar respuesta
+        // Retornar respuesta JSON
+        const responseBody = {
+            success: true,
+            cotizacion: cotizacionCache.valor,
+            fecha: cotizacionCache.fecha,
+            ultimaActualizacion: cotizacionCache.ultimaActualizacion,
+            fuente: cacheValido() ? 'cache' : 'bcu',
+            timestamp: new Date().toISOString()
+        };
+
+        console.log('✅ Enviando respuesta:', responseBody);
+
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({
-                success: true,
-                cotizacion: cotizacionCache.valor,
-                fecha: cotizacionCache.fecha,
-                ultimaActualizacion: cotizacionCache.ultimaActualizacion,
-                fuente: cacheValido() ? 'cache' : 'bcu',
-                timestamp: new Date().toISOString()
-            })
+            body: JSON.stringify(responseBody)
         };
 
     } catch (error) {
         console.error('❌ Error en cotizacion-bcu:', error.message);
+        console.error('Stack:', error.stack);
 
         // Si hay un valor en cache, usarlo como fallback
         if (cotizacionCache) {

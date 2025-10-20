@@ -84,6 +84,14 @@ class CotizacionService {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
 
+            // Verificar el content-type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('❌ Respuesta no es JSON:', text);
+                throw new Error(`Respuesta no es JSON. Content-Type: ${contentType}`);
+            }
+
             const data: CotizacionResponse = await response.json();
 
             if (data.success) {
