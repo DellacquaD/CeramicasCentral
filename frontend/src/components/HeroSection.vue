@@ -295,7 +295,7 @@ onMounted(async () => {
         startAutoplay()
       }, 100)
     }
-  }, 3000) // 👈 CAMBIA ESTE NÚMERO para ajustar el tiempo (en milisegundos)
+  }, 1500) // 👈 CAMBIA ESTE NÚMERO para ajustar el tiempo (en milisegundos)
 })
 
 onUnmounted(() => {
