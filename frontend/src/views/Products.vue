@@ -290,7 +290,7 @@ const cartStore = useCartStore()
 // Cotización
 const cotizacionUSD = ref<number>(42)
 const cotizacionCargando = ref<boolean>(true)
-const { obtenerCotizacion, getInfo } = useCotizacion()
+const { obtenerCotizacion } = useCotizacion()
 
 // State
 const productos = ref<ProductoAPI[]>([])

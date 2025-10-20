@@ -19,7 +19,7 @@ export interface CartItem {
     nombre: string
     precio: number
     precioMetro?: number
-    metrosPorCaja?: number
+    metrosPorCaja: number
     imagenPrincipal?: string
     marca: string
     unidad: string
@@ -65,7 +65,7 @@ export const useCartStore = defineStore('cart', () => {
                 nombre: product.nombre,
                 precio,
                 precioMetro: product.precioMetro,
-                metrosPorCaja: product.metrosPorCaja,
+                metrosPorCaja: product.metrosPorCaja || 1,
                 imagenPrincipal: product.imagenPrincipal,
                 marca: product.marca || 'Sin marca',
                 unidad: product.unidad || 'caja',
