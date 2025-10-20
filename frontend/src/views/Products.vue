@@ -2,22 +2,22 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center h-64">
+      <div v-if="productsStore.loading" class="flex justify-center items-center h-64">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <span class="ml-3 text-gray-600 dark:text-gray-400">Cargando productos...</span>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="text-center py-20">
+      <div v-else-if="productsStore.error" class="text-center py-20">
         <div class="text-red-600 dark:text-red-400 mb-4">
           <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
           </svg>
           <p class="text-xl font-semibold">Error al cargar productos</p>
-          <p class="text-gray-600 dark:text-gray-400 mt-2">{{ error }}</p>
+          <p class="text-gray-600 dark:text-gray-400 mt-2">{{ productsStore.error }}</p>
         </div>
         <button
-            @click="cargarProductos(true)"
+            @click="productsStore.cargarProductos(true)"
             class="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-200"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,7 +51,6 @@
                 {{ pageTitle }}
               </h1>
 
-              <!-- Indicador de cotización -->
               <div class="flex items-center gap-4">
                 <p class="text-gray-600 dark:text-gray-400">
                   {{ productosFiltrados.length }} productos
@@ -137,7 +136,6 @@
                 </div>
 
                 <div class="mb-3">
-                  <!-- Precio anterior si existe -->
                   <span v-if="product.precioAnterior && product.precioAnterior > 0"
                         class="text-sm text-gray-500 line-through mr-2">
                     ${{ formatearPrecio(product.precioAnterior * cotizacionUSD) }}
@@ -145,7 +143,6 @@
 
                   <div class="flex items-center justify-between mx-3">
                     <div class="flex flex-col">
-                      <!-- PRECIO EN PESOS URUGUAYOS -->
                       <div class="flex items-baseline gap-1">
                         <span class="text-lg font-bold text-blue-600 dark:text-blue-400">
                           ${{ formatearPrecio(product.precioUYU) }}
@@ -153,15 +150,9 @@
                         <span class="text-sm text-gray-500">caja</span>
                       </div>
 
-                      <!-- Precio por metro cuadrado -->
                       <span v-if="product.precioMetro" class="text-sm text-gray-500">
                         ${{ formatearPrecio(product.precioMetroUYU) }} m²
                       </span>
-
-                      <!-- Precio en USD (referencia) -->
-<!--                      <span class="text-xs text-gray-400 mt-1">-->
-<!--                        US$ {{ (product.precioMetro * product.metrosPorCaja).toFixed(2) }}-->
-<!--                      </span>-->
                     </div>
 
                     <button
@@ -233,6 +224,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
 import { useCartStore } from '../stores/cart'
+import { useProductsStore } from '../stores/products'
 import { useCotizacion } from '../services/cotizacionService'
 
 // Interfaces
@@ -266,16 +258,6 @@ interface ProductoConPrecioUYU extends ProductoAPI {
   precioMetroUYU: number
 }
 
-interface CacheInfo {
-  edadEnMinutos: number
-  ultimaActualizacion: string
-}
-
-interface ApiResponse {
-  productos: ProductoAPI[]
-  cacheInfo: CacheInfo
-}
-
 // Props
 interface Props {
   categorySlug?: string
@@ -283,83 +265,29 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Router y Store
+// Router y Stores
 const router = useRouter()
 const cartStore = useCartStore()
+const productsStore = useProductsStore()
 
 // Cotización
 const cotizacionUSD = ref<number>(42)
-const cotizacionCargando = ref<boolean>(true)
 const { obtenerCotizacion } = useCotizacion()
 
 // State
-const productos = ref<ProductoAPI[]>([])
-const loading = ref<boolean>(true)
-const error = ref<string | null>(null)
-const cacheInfo = ref<CacheInfo | null>(null)
 const searchTerm = ref<string>('')
 const sortBy = ref<string>('name')
 const currentPage = ref<number>(1)
 const itemsPerPage = 12
 
-// API URL
-const API_URL = 'https://ceramicascentral.netlify.app/.netlify/functions/products'
-
 // Methods
 const cargarCotizacion = async (): Promise<void> => {
   try {
-    cotizacionCargando.value = true
-    console.log('🔄 Cargando cotización del dólar...')
-
     const valor = await obtenerCotizacion()
     cotizacionUSD.value = valor
-
     console.log('✅ Cotización cargada:', valor)
   } catch (error) {
     console.error('❌ Error al cargar cotización:', error)
-  } finally {
-    cotizacionCargando.value = false
-  }
-}
-
-const cargarProductos = async (forzar: boolean = false): Promise<void> => {
-  loading.value = true
-  error.value = null
-
-  try {
-    console.log('Intentando fetch a:', API_URL)
-
-    const url = forzar ? `${API_URL}?refresh=true` : API_URL
-
-    const response = await fetch(url, {
-      method: 'GET',
-      mode: 'cors',
-      cache: 'no-cache'
-    })
-
-    console.log('Response status:', response.status)
-    console.log('Response ok:', response.ok)
-
-    if (!response.ok) {
-      throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data: ApiResponse = await response.json()
-    console.log('Data recibida:', data)
-
-    if (data.productos) {
-      productos.value = data.productos
-      cacheInfo.value = data.cacheInfo
-      console.log('Productos cargados:', productos.value.length)
-    } else {
-      throw new Error('Formato de respuesta inesperado - no se encontró "productos"')
-    }
-
-  } catch (err) {
-    console.error('Error al cargar productos:', err)
-    error.value = err instanceof Error ? err.message : 'Error desconocido al cargar productos'
-  } finally {
-    loading.value = false
   }
 }
 
@@ -383,14 +311,9 @@ const goToProduct = (product: ProductoAPI): void => {
 // Computed
 const productosFiltradosPorCategoria = computed((): ProductoAPI[] => {
   if (props.categorySlug) {
-    return productos.value.filter(p =>
-        Array.isArray(p.categoria) &&
-        p.categoria.some(cat => cat.toLowerCase() === props.categorySlug!.toLowerCase()) &&
-        p.disponible &&
-        p.activo
-    )
+    return productsStore.getProductosByCategoria(props.categorySlug)
   }
-  return productos.value.filter(p => p.disponible && p.activo)
+  return productsStore.productosActivos
 })
 
 const productosFiltrados = computed((): ProductoAPI[] => {
@@ -402,14 +325,8 @@ const productosFiltrados = computed((): ProductoAPI[] => {
     result = result.filter(p => {
       const nombre = p.nombre?.toLowerCase() || ''
       const marca = p.marca?.toLowerCase() || ''
-
-      const categorias = Array.isArray(p.categoria)
-          ? p.categoria.map(c => c.toLowerCase())
-          : []
-
-      const tags = Array.isArray(p.tags)
-          ? p.tags.map(t => t.toLowerCase())
-          : []
+      const categorias = Array.isArray(p.categoria) ? p.categoria.map(c => c.toLowerCase()) : []
+      const tags = Array.isArray(p.tags) ? p.tags.map(t => t.toLowerCase()) : []
 
       return (
           nombre.includes(term) ||
@@ -509,10 +426,13 @@ watch(searchTerm, () => {
 
 // Lifecycle
 onMounted(async () => {
-  await Promise.all([
-    cargarProductos(),
-    cargarCotizacion()
-  ])
+  // Solo cargar cotización, los productos ya fueron cargados en App.vue
+  await cargarCotizacion()
+
+  // Si por alguna razón no se cargaron, intentar cargarlos aquí
+  if (!productsStore.initialized) {
+    await productsStore.cargarProductos()
+  }
 })
 </script>
 

@@ -1,11 +1,6 @@
 <template>
   <div id="app" class="min-h-screen w-screen bg-gray-50 dark:bg-gray-900">
     <!-- Header Component -->
-<!--    <HeaderComponent-->
-<!--        :is-dark="isDark"-->
-<!--        @toggle-theme="toggleTheme"-->
-<!--    />-->
-
     <HeaderComponent
         :is-dark="isDark"
         @toggle-theme="toggleTheme"
@@ -39,7 +34,7 @@
         @search="handleSearch"
     />
 
-    <!-- Notification Toast (simplificado, el store tiene su propio sistema) -->
+    <!-- Notification Toast -->
     <div
         v-if="notification.show"
         :class="[
@@ -61,10 +56,16 @@ import FooterComponent from './components/FooterComponent.vue'
 import CartSidebar from './components/CartSidebar.vue'
 import SearchModal from './components/SearchModal.vue'
 import { useCartStore } from './stores/cart'
+import { useProductsStore } from './stores/products'
+import { useCotizacion } from './services/cotizacionService'
 
-// Router y Store
+// Router y Stores
 const router = useRouter()
 const cartStore = useCartStore()
+const productsStore = useProductsStore()
+
+// Cotización service
+const { obtenerCotizacion } = useCotizacion()
 
 // State (solo lo que no está en el store)
 const currentCurrency = ref('UYU')
@@ -160,11 +161,23 @@ const initCurrency = () => {
 }
 
 // Initialize all on mount
-onMounted(() => {
+onMounted(async () => {
+  console.log('🚀 Inicializando aplicación...')
+
+  // Inicializar tema y moneda
   initTheme()
   initCurrency()
-  // El carrito se carga automáticamente desde el store
+
+  // Cargar carrito desde localStorage
   cartStore.loadFromLocalStorage()
+
+  // 🔥 Cargar datos críticos en paralelo (productos + cotización)
+  await Promise.all([
+    productsStore.cargarProductos(),
+    obtenerCotizacion()
+  ])
+
+  console.log('✅ Aplicación inicializada - Productos y cotización cargados')
 })
 </script>
 

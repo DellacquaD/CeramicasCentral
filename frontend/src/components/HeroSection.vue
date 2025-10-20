@@ -1,278 +1,382 @@
 <template>
-  <section class="relative overflow-hidden">
-    <!-- Background with gradient and tile pattern -->
-    <div class="h-96 bg-gradient-to-br from-gray-700 to-gray-950 relative">
-      <!-- Animated tile pattern with rotating images -->
-      <div class="absolute inset-0">
-        <div class="lg:grid-cols-10 grid grid-cols-5 gap-1 h-full p-6 opacity-20">
-          <div
-              v-for="i in 30"
-              :key="i"
-              class="bg-white rounded-sm transform transition-all duration-1000 hover:scale-105 overflow-hidden relative"
-              :style="{
-              animationDelay: `${Math.random() * 2}s`,
-              animation: `float 6s ease-in-out infinite`
-            }"
-          >
-            <!-- Transición suave entre imágenes -->
-            <div class="w-full h-full relative">
-              <!-- Imagen actual -->
-              <img
-                  :src="getTileCurrentImage(i)"
-                  :alt="`Producto ${i}`"
-                  class="w-full h-full object-cover absolute inset-0 transition-opacity duration-1000"
-                  :style="{
-                  opacity: tileTransitioning[i] ? 0 : (0.7 + (i % 3) * 0.1)
-                }"
-                  loading="lazy"
-              />
-              <!-- Imagen siguiente (aparece durante la transición) -->
-              <img
-                  v-if="tileNextImages[i]"
-                  :src="tileNextImages[i]"
-                  :alt="`Producto ${i} siguiente`"
-                  class="w-full h-full object-cover absolute inset-0 transition-opacity duration-1000"
-                  :style="{
-                  opacity: tileTransitioning[i] ? (0.7 + (i % 3) * 0.1) : 0
-                }"
-                  loading="lazy"
-              />
+  <section class="relative overflow-hidden bg-gray-100 dark:bg-gray-900 h-[350px] sm:h-[400px] lg:h-[450px]">
+    <!-- Loading Splash (solo en este componente) -->
+    <transition name="splash">
+      <div
+          v-if="isLoading"
+          class="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-blue-900 via-gray-900 to-blue-900"
+      >
+        <div class="text-center px-4">
+          <div class="mb-6 relative">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-24 h-24 bg-blue-500/20 rounded-full animate-ping"></div>
             </div>
-            <!-- Overlay for better blend -->
-            <div class="absolute inset-0 bg-white/40"></div>
+            <div class="relative text-7xl animate-bounce-slow">🏠</div>
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl font-bold text-white mb-3 animate-fade-in-up">
+            Cerámicas <span class="text-blue-400">Central</span>
+          </h1>
+
+          <p class="text-lg text-blue-200 mb-6 animate-fade-in-up animation-delay-300">
+            Transformando espacios, creando hogares
+          </p>
+
+          <div class="flex items-center justify-center gap-2 animate-fade-in-up animation-delay-500">
+            <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+            <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse animation-delay-200"></div>
+            <div class="w-2 h-2 bg-blue-400 rounded-full animate-pulse animation-delay-400"></div>
           </div>
         </div>
       </div>
+    </transition>
 
-      <!-- Decorative elements -->
-      <div class="absolute top-20 left-20 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-      <div class="absolute bottom-20 right-20 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-
-      <!-- Main content -->
-      <div class="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
-        <!-- Title -->
-        <div class="text-center md:mb-4">
-          <h1 class="text-xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
-            Todo para tu
-            <span class="text-blue-200">Remodelación</span>
-          </h1>
-          <p class="hidden sm:flex text-xl text-blue-100 max-w-2xl">
-            Encuentra los mejores materiales y productos para tus proyectos
-          </p>
-        </div>
-
-        <!-- Search bar -->
-        <div class="max-w-full px-4">
-          <div class="relative group">
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
-            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden ">
-              <div class="flex flex-col sm:flex-row items-stretch">
-                <div class="flex-1 relative">
-                  <MagnifyingGlassIcon class="absolute left-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
-                  <input
-                      v-model="searchQuery"
-                      @keyup.enter="handleSearch"
-                      type="text"
-                      placeholder="¿Qué buscas? Ej: vinílicos, pisos..."
-                      class="w-full pl-16 pr-2 py-2 text-lg bg-transparent border-0 focus:outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  />
+    <!-- Main Slider -->
+    <div v-show="!isLoading" class="relative h-[350px] sm:h-[400px] lg:h-[450px]">
+      <!-- Slides -->
+      <transition-group name="fade">
+        <div
+            v-for="(slide, index) in slides"
+            :key="`slide-${index}`"
+            v-show="currentSlide === index"
+            class="absolute inset-0"
+        >
+          <!-- Grid de 2 productos -->
+          <div class="relative h-full grid grid-cols-2">
+            <!-- Producto Izquierdo -->
+            <div class="relative overflow-hidden">
+              <div class="absolute inset-0">
+                <img
+                    v-if="slide.left.imagenPrincipal"
+                    :src="slide.left.imagenPrincipal"
+                    :alt="slide.left.nombre"
+                    class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                  <div class="text-6xl">📦</div>
                 </div>
+                <div class="absolute inset-0 bg-black/50"></div>
+              </div>
 
-                <!-- Search button -->
-                <button
-                    @click="handleSearch"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-2 font-medium text-lg transition-colors duration-200 hover:shadow-lg"
-                >
-                  Buscar
-                </button>
+              <div class="relative h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-md">
+                  <div class="flex justify-center gap-2 mb-3">
+                    <span v-if="slide.left.nuevo" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold">NUEVO</span>
+                    <span v-if="slide.left.enOferta" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-bold">OFERTA</span>
+                  </div>
+
+                  <p class="text-blue-400 text-sm font-bold mb-2 uppercase">{{ slide.left.marca }}</p>
+                  <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight line-clamp-2">{{ slide.left.nombre }}</h2>
+
+                  <div class="mb-4">
+                    <div v-if="slide.left.precioAnterior && slide.left.precioAnterior > 0" class="flex items-center justify-center gap-2 mb-1">
+                      <span class="text-lg text-red-300 line-through">${{ formatearPrecio(slide.left.precioAnterior * cotizacion) }}</span>
+                      <span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">-{{ calcularDescuento(slide.left) }}%</span>
+                    </div>
+
+                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1">
+                      ${{ formatearPrecio(slide.left.precioMetro * slide.left.metrosPorCaja * cotizacion) }}<span class="text-2xl sm:text-3xl lg:text-4xl">📦</span>
+                    </div>
+
+                    <p class="text-white/80 text-sm">${{ formatearPrecio(slide.left.precioMetro * cotizacion) }} m²</p>
+                  </div>
+
+                  <button
+                      @click="viewProduct(slide.left)"
+                      class="bg-white hover:bg-blue-50 text-gray-900 font-bold px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
+                  >
+                    Ver oferta
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Producto Derecho -->
+            <div class="relative overflow-hidden">
+              <div class="absolute inset-0">
+                <img
+                    v-if="slide.right.imagenPrincipal"
+                    :src="slide.right.imagenPrincipal"
+                    :alt="slide.right.nombre"
+                    class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+                  <div class="text-6xl">📦</div>
+                </div>
+                <div class="absolute inset-0 bg-black/50"></div>
+              </div>
+
+              <div class="relative h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-md">
+                  <div class="flex justify-center gap-2 mb-3">
+                    <span v-if="slide.right.nuevo" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold">NUEVO</span>
+                    <span v-if="slide.right.enOferta" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-bold">OFERTA</span>
+                  </div>
+
+                  <p class="text-blue-400 text-sm font-bold mb-2 uppercase">{{ slide.right.marca }}</p>
+                  <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight line-clamp-2">{{ slide.right.nombre }}</h2>
+
+                  <div class="mb-4">
+                    <div v-if="slide.right.precioAnterior && slide.right.precioAnterior > 0" class="flex items-center justify-center gap-2 mb-1">
+                      <span class="text-lg text-red-300 line-through">${{ formatearPrecio(slide.right.precioAnterior * cotizacion) }}</span>
+                      <span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">-{{ calcularDescuento(slide.right) }}%</span>
+                    </div>
+
+                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1">
+                      ${{ formatearPrecio(slide.right.precioMetro * slide.right.metrosPorCaja * cotizacion) }}<span class="text-2xl sm:text-3xl lg:text-4xl">📦</span>
+                    </div>
+
+                    <p class="text-white/80 text-sm">${{ formatearPrecio(slide.right.precioMetro * cotizacion) }} m²</p>
+                  </div>
+
+                  <button
+                      @click="viewProduct(slide.right)"
+                      class="bg-white hover:bg-blue-50 text-gray-900 font-bold px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
+                  >
+                    Ver oferta
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
-          <!-- Quick search suggestions -->
-          <div class="mt-2 text-center">
-            <span class="text-blue-100 text-sm font-medium mr-4">Búsquedas populares:</span>
-            <div class="inline-flex flex-wrap gap-3 mt-2">
-              <button
-                  v-for="suggestion in displayedSuggestions"
-                  :key="suggestion"
-                  @click="quickSearch(suggestion)"
-                  class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-full text-sm font-medium transition-all duration-200 hover:scale-105"
-              >
-                {{ suggestion }}
-              </button>
-            </div>
-          </div>
         </div>
+      </transition-group>
+
+      <!-- Navigation Arrows -->
+      <button
+          @click="prevSlide"
+          class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-2 sm:p-3 rounded-full transition-all duration-300 hover:scale-110 shadow-lg z-10"
+          aria-label="Anterior"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <button
+          @click="nextSlide"
+          class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-2 sm:p-3 rounded-full transition-all duration-300 hover:scale-110 shadow-lg z-10"
+          aria-label="Siguiente"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <!-- Dots Navigation -->
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        <button
+            v-for="(slide, index) in slides"
+            :key="`dot-${index}`"
+            @click="goToSlide(index)"
+            :class="[
+              'transition-all duration-300',
+              currentSlide === index
+                ? 'w-8 h-2.5 bg-white rounded-full'
+                : 'w-2.5 h-2.5 bg-white/50 hover:bg-white/75 rounded-full'
+            ]"
+            :aria-label="`Ir a slide ${index + 1}`"
+        ></button>
       </div>
     </div>
   </section>
 </template>
 
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useProductsStore } from '../stores/products'
+import { useCotizacion } from '../services/cotizacionService'
 
-// Emits
-const emit = defineEmits(['search'])
+const router = useRouter()
+const productsStore = useProductsStore()
+const { obtenerCotizacion } = useCotizacion()
 
-// Local state
-const searchQuery = ref('')
-const tileImages = ref({}) // Imagen actual de cada tile
-const tileNextImages = ref({}) // Próxima imagen de cada tile
-const tileTransitioning = ref({}) // Estado de transición de cada tile
-const tileIntervals = ref(new Map()) // Map para almacenar los intervalos de cada tile
+const currentSlide = ref(0)
+const autoplayInterval = ref<number | null>(null)
+const cotizacion = ref(42)
+const isLoading = ref(true)
 
-// Array de imágenes disponibles
-const imageUrls = ref([
-  // Cerámicas y pisos
-  'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1571055107559-3e67626fa8be?w=100&h=100&fit=crop',
+const slides = computed(() => {
+  const productos = productsStore.productosActivos.filter(p => p.enOferta || p.nuevo)
 
-  // Baños y griferías
-  'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=100&h=100&fit=crop',
-
-  // Cocinas
-  'https://images.unsplash.com/photo-1556185781-a47769abb7b4?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1556185399-e77a74475434?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop',
-
-  // Vinílicos y materiales
-  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=100&h=100&fit=crop',
-  'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=100&h=100&fit=crop'
-])
-
-// Intervalo para cambiar imágenes - ya no es necesario un intervalo global
-// let imageChangeInterval = null - Eliminado
-
-// Quick search suggestions
-const quickSearches = ref([
-  'Ofertas del mes',
-  'Piso vinílico',
-  'Porcelanato 60x60',
-  'Azulejos para baño',
-  'Mesada de cocina'
-])
-
-// Methods
-const getTileCurrentImage = (tileIndex) => {
-  // Si no existe imagen para este tile, asignar una inicial
-  if (!tileImages.value[tileIndex]) {
-    tileImages.value[tileIndex] = imageUrls.value[tileIndex % imageUrls.value.length]
+  if (productos.length < 6) {
+    const adicionales = productsStore.productosActivos
+        .filter(p => !productos.includes(p))
+        .slice(0, 6 - productos.length)
+    productos.push(...adicionales)
   }
-  return tileImages.value[tileIndex]
+
+  const slidesArray = []
+  for (let i = 0; i < productos.length; i += 2) {
+    if (productos[i] && productos[i + 1]) {
+      slidesArray.push({
+        left: productos[i],
+        right: productos[i + 1]
+      })
+    }
+  }
+
+  return slidesArray.slice(0, 5)
+})
+
+const formatearPrecio = (precio: number): string => {
+  return Math.round(precio).toLocaleString('es-UY')
 }
 
-const getRandomImageForTile = (tileIndex) => {
-  // Obtener una imagen aleatoria diferente a la actual
-  const currentImage = tileImages.value[tileIndex]
-  let newImage
-  do {
-    newImage = imageUrls.value[Math.floor(Math.random() * imageUrls.value.length)]
-  } while (newImage === currentImage && imageUrls.value.length > 1)
-
-  return newImage
+const calcularDescuento = (product: any): number => {
+  if (!product.precioAnterior || product.precioAnterior <= 0) return 0
+  const precioActual = product.precioMetro * product.metrosPorCaja
+  const descuento = ((product.precioAnterior - precioActual) / product.precioAnterior) * 100
+  return Math.round(descuento)
 }
 
-const transitionToNewImage = (tileIndex, newImage) => {
-  // Configurar la nueva imagen
-  tileNextImages.value[tileIndex] = newImage
+const nextSlide = (): void => {
+  currentSlide.value = (currentSlide.value + 1) % slides.value.length
+  resetAutoplay()
+}
 
-  // Iniciar transición (imagen actual se desvanece, nueva aparece)
-  tileTransitioning.value[tileIndex] = true
+const prevSlide = (): void => {
+  currentSlide.value = currentSlide.value === 0
+      ? slides.value.length - 1
+      : currentSlide.value - 1
+  resetAutoplay()
+}
 
-  // Después de que termine la transición (1000ms), intercambiar las imágenes
+const goToSlide = (index: number): void => {
+  currentSlide.value = index
+  resetAutoplay()
+}
+
+const startAutoplay = (): void => {
+  autoplayInterval.value = window.setInterval(() => {
+    nextSlide()
+  }, 5000)
+}
+
+const stopAutoplay = (): void => {
+  if (autoplayInterval.value) {
+    clearInterval(autoplayInterval.value)
+    autoplayInterval.value = null
+  }
+}
+
+const resetAutoplay = (): void => {
+  stopAutoplay()
+  startAutoplay()
+}
+
+const viewProduct = (product: any): void => {
+  router.push(`/producto/${product.slug}`)
+}
+
+const cargarCotizacion = async (): Promise<void> => {
+  try {
+    cotizacion.value = await obtenerCotizacion()
+  } catch (error) {
+    console.error('Error al cargar cotización:', error)
+  }
+}
+
+onMounted(async () => {
+  await cargarCotizacion()
+
+  if (!productsStore.initialized) {
+    await productsStore.cargarProductos()
+  }
+
+  // Ocultar splash después de 3 segundos
   setTimeout(() => {
-    tileImages.value[tileIndex] = newImage
-    tileNextImages.value[tileIndex] = null
-    tileTransitioning.value[tileIndex] = false
-  }, 1000)
-}
+    isLoading.value = false
 
-const createTileInterval = (tileIndex) => {
-  // Tiempo aleatorio entre 2 y 22 segundos (según tu ajuste)
-  const randomInterval = Math.random() * 2000 + 12000
-
-  const intervalId = setInterval(() => {
-    // Obtener nueva imagen y hacer transición suave
-    const newImage = getRandomImageForTile(tileIndex)
-    transitionToNewImage(tileIndex, newImage)
-  }, randomInterval)
-
-  return intervalId
-}
-
-const initializeTiles = () => {
-  // Inicializar cada tile con una imagen y crear su intervalo
-  for (let i = 1; i <= 100; i++) {
-    // Asignar imagen inicial
-    tileImages.value[i] = imageUrls.value[(i - 1) % imageUrls.value.length]
-    tileTransitioning.value[i] = false
-
-    // Crear intervalo con delay inicial aleatorio
-    setTimeout(() => {
-      const intervalId = createTileInterval(i)
-      tileIntervals.value.set(i, intervalId)
-    }, Math.random() * 5000) // Delay inicial aleatorio de 0-5 segundos
-  }
-}
-
-const stopAllIntervals = () => {
-  tileIntervals.value.forEach((intervalId) => {
-    clearInterval(intervalId)
-  })
-  tileIntervals.value.clear()
-}
-
-const handleSearch = () => {
-  if (searchQuery.value.trim()) {
-    emit('search', {
-      query: searchQuery.value.trim()
-    })
-  }
-}
-
-const quickSearch = (suggestion) => {
-  searchQuery.value = suggestion
-  handleSearch()
-}
-
-// Lifecycle
-onMounted(() => {
-  initializeTiles()
+    // Iniciar autoplay después de que el splash desaparezca
+    if (slides.value.length > 0) {
+      setTimeout(() => {
+        startAutoplay()
+      }, 100)
+    }
+  }, 1500) // 👈 CAMBIA ESTE NÚMERO para ajustar el tiempo (en milisegundos)
 })
 
 onUnmounted(() => {
-  stopAllIntervals()
+  stopAutoplay()
 })
-
-import { computed } from 'vue'
-
-const displayedSuggestions = computed(() => {
-  if (window.innerWidth < 640) {
-    return quickSearches.value.slice(0, 3)
-  }
-  return quickSearches.value
-})
-
 </script>
 
 <style scoped>
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-10px) rotate(1deg); }
-  66% { transform: translateY(5px) rotate(-1deg); }
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.grid-cols-20 {
-  grid-template-columns: repeat(20, minmax(0, 1fr));
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.8s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Splash animations */
+.splash-enter-active {
+  transition: opacity 0.5s ease;
+}
+
+.splash-leave-active {
+  transition: opacity 0.8s ease;
+}
+
+.splash-enter-from,
+.splash-leave-to {
+  opacity: 0;
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animation-delay-500 {
+  animation-delay: 0.5s;
 }
 </style>
