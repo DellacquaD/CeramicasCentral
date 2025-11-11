@@ -38,3 +38,7 @@ src/**/*.vue.d.ts
 src/**/*.vue.js
 src/router/*.js
 !src/**/*.config.js
+node_modules/
+dist/
+.env
+.env.local
