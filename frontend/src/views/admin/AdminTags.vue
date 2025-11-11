@@ -29,5 +29,5 @@ const fields = [
 const loadData = () => adminStore.getTags()
 const createItem = (data: any) => adminStore.createTag(data)
 const updateItem = (id: string, data: any) => adminStore.updateTag(id, data)
-const deleteItem = (id: string) => adminStore.deleteTags(id)
+const deleteItem = (id: string) => adminStore.deleteTag(id)
 </script>

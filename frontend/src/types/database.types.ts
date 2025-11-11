@@ -451,6 +451,26 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+            id: string
+            email: string
+            created_at: string | null
+            updated_at: string | null
+            // Add any other columns from your admin_users table
+        }
+        Insert: {
+            id?: string
+            email: string
+            created_at?: string | null
+        }
+        Update: {
+            id?: string
+            email?: string
+            created_at?: string | null
+        }
+        Relationships: []
+    }
     }
     Views: {
       [_ in never]: never

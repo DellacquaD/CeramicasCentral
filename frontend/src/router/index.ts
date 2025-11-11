@@ -1,10 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 // Import views/pages
-import Home from '../views/Home.vue'
 import Categories from '../views/Categories.vue'
 import Products from '../views/Products.vue'
 import ProductDetail from '../views/ProductDetail.vue'
@@ -21,12 +19,13 @@ import AdminCategories from '@/views/admin/AdminCategories.vue'
 import AdminColors from '@/views/admin/AdminColors.vue'
 import AdminMaterials from '@/views/admin/AdminMaterials.vue'
 import AdminTags from '@/views/admin/AdminTags.vue'
+import HeroSection from "@/components/HeroSection.vue";
 
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'Home',
-        component: Home,
+        component: HeroSection,
         meta: {
             title: 'Inicio - CerámicasCentral'
         }
@@ -167,7 +166,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-    history: createWebHistory('/CeramicasCentral/'),
+    history: createWebHistory(import.meta.env.BASE_URL),
     routes,
     // Scroll behavior para mejorar UX
     scrollBehavior(to, _from, savedPosition) {
@@ -185,7 +184,7 @@ const router = createRouter({
 })
 
 // Guards combinados
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
     // 1. Actualizar título de la página (tu guard original)
     document.title = (to.meta?.title as string) || 'CerámicasCentral - Construcción'
 

@@ -445,7 +445,7 @@
                 <div v-for="(image, index) in form.images" :key="index" class="flex gap-2">
                   <input
                       v-model="form.images[index]"
-                      type="url"
+                      type="text"
                       class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                       placeholder="https://ejemplo.com/imagen.jpg"
                   >
@@ -742,11 +742,6 @@ const filteredProducts = computed(() => {
   return result
 })
 
-// Obtener nombre de marca
-const getBrandName = (brandId: string): string => {
-  return brands.value.find(b => b.id === brandId)?.name || '-'
-}
-
 // Cargar datos
 const loadData = async () => {
   loading.value = true
@@ -762,7 +757,7 @@ const loadData = async () => {
         .order('created_at', { ascending: false })
 
     if (productsError) throw productsError
-    products.value = productsData.map(p => ({
+    products.value = productsData.map((p: any )=> ({
       ...p,
       images: p.images.sort((a: any, b: any) => a.display_order - b.display_order)
     }))
@@ -840,9 +835,9 @@ const openEditModal = async (product: Product) => {
     brand_id: product.brand_id,
     color_id: product.color_id,
     material_id: product.material_id,
-    category_ids: categoriesRes.data?.map(c => c.category_id) || [],
-    subcategory_ids: subcategoriesRes.data?.map(s => s.subcategory_id) || [],
-    tag_ids: tagsRes.data?.map(t => t.tag_id) || [],
+    category_ids: categoriesRes.data?.map((c: any) => c.category_id) || [],
+    subcategory_ids: subcategoriesRes.data?.map((s: any) => s.subcategory_id) || [],
+    tag_ids: tagsRes.data?.map((t: any) => t.tag_id) || [],
     images: product.images?.map(img => img.url) || [''],
     weight: product.weight,
     activo: product.activo,
@@ -884,9 +879,9 @@ const saveProduct = async () => {
 
     const productData = {
       sku: form.value.sku,
-      name: form.value.name,
+      nombre: form.value.name,
       slug: slug,
-      price: form.value.price,
+      precio: form.value.price,
       compare_price: form.value.compare_price,
       cost: form.value.cost,
       stock: form.value.stock,
@@ -993,7 +988,7 @@ const toggleProductStatus = async (product: Product) => {
 
     // Actualización inmediata en la UI
     const index = products.value.findIndex(p => p.id === product.id)
-    if (index !== -1) {
+    if (products.value[index]) {
       products.value[index].activo = newStatus
     }
   } catch (error) {

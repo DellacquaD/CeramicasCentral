@@ -185,8 +185,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useProductsStore } from '../stores/products'
-import { useCotizacion } from '../services/cotizacionService'
+import { useProductsStore } from '@/stores/products'
+import { useCotizacion } from '@/services/cotizacionService'
 
 const router = useRouter()
 const productsStore = useProductsStore()
@@ -198,7 +198,7 @@ const cotizacion = ref(42)
 const isLoading = ref(true)
 
 const slides = computed(() => {
-  const productos = productsStore.productosActivos.filter(p => p.enOferta || p.nuevo)
+  const productos = productsStore.productosActivos.filter(p => p.en_oferta || p.nuevo)
 
   if (productos.length < 6) {
     const adicionales = productsStore.productosActivos

@@ -57,9 +57,6 @@
               </div>
             </div>
             <div class="p-4">
-              <p class="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
-                {{ category.description || 'Descubre nuestra selección de productos' }}
-              </p>
               <div class="flex items-center justify-between">
                 <span class="text-blue-600 dark:text-blue-400 font-medium text-sm">
                   Ver productos
@@ -131,12 +128,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ArrowRightIcon } from '@heroicons/vue/24/outline'
-import { useProductsStore } from '../stores/products'
-import type { Database } from '../types/database.types'
+import { useProductsStore } from '@/stores/products'
+import type { Database } from '@/types/database.types'
 
 type Category = Database['public']['Tables']['categories']['Row']
 
 interface CategoryWithCount extends Category {
+  description?: 'string' | null
   productCount: number
 }
 
@@ -203,12 +201,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
 @keyframes spin {
   to { transform: rotate(360deg); }

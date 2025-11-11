@@ -539,9 +539,9 @@ const loadCategories = async () => {
 
     if (subcategoriesError) throw subcategoriesError
 
-    categories.value = categoriesData.map(cat => ({
+    categories.value = categoriesData.map((cat: any) => ({
       ...cat,
-      subcategories: subcategoriesData.filter(sub => sub.category_id === cat.id)
+      subcategories: subcategoriesData.filter((sub: any) => sub.category_id === cat.id)
     }))
   } catch (error) {
     console.error('Error loading categories:', error)
@@ -626,7 +626,7 @@ const toggleCategoryStatus = async (category: Category) => {
 
     // Actualizar inmediatamente en la UI
     const index = categories.value.findIndex(c => c.id === category.id)
-    if (index !== -1) {
+    if (categories.value[index]) {
       categories.value[index].is_active = newStatus
     }
   } catch (error) {
@@ -737,9 +737,8 @@ const toggleSubcategoryStatus = async (subcategory: Subcategory) => {
     for (const category of categories.value) {
       if (category.subcategories) {
         const subIndex = category.subcategories.findIndex(s => s.id === subcategory.id)
-        if (subIndex !== -1) {
+        if (category.subcategories?.[subIndex]) {
           category.subcategories[subIndex].is_active = newStatus
-          break
         }
       }
     }

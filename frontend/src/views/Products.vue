@@ -223,10 +223,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
-import { useCartStore } from '../stores/cart'
-import { useProductsStore } from '../stores/products'
-import { useCotizacion } from '../services/cotizacionService'
-import type { ProductoAPI } from '../stores/products'
+import { useCartStore } from '@/stores/cart'
+import { useProductsStore } from '@/stores/products'
+import { useCotizacion } from '@/services/cotizacionService'
+import type { ProductoAPI } from '@/stores/products'
 
 // Interfaz extendida con precios en UYU
 interface ProductoConPrecioUYU extends ProductoAPI {
@@ -319,16 +319,16 @@ const productosFiltrados = computed((): ProductoAPI[] => {
   // Ordenamiento
   switch (sortBy.value) {
     case 'price-low':
-      result = [...result].sort((a, b) => (a.price || 0) - (b.price || 0))
+      result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
       break
     case 'price-high':
-      result = [...result].sort((a, b) => (b.price || 0) - (a.price || 0))
+      result = [...result].sort((a, b) => (b.precio || 0) - (a.precio || 0))
       break
     case 'stock':
       result = [...result].sort((a, b) => (b.stock || 0) - (a.stock || 0))
       break
     default:
-      result = [...result].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      result = [...result].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
   }
 
   return result
@@ -426,9 +426,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+
 .line-clamp-2 {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

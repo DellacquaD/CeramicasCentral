@@ -3,23 +3,23 @@ import { ref, computed } from 'vue'
 import type {ProductoAPI} from "./products.ts";
 
 // Interfaces
-export interface Product {
-    id: string | number
-    nombre: string
-    precio?: number
-    precioMetro?: number
-    metrosPorCaja?: number
-    imagenPrincipal?: string
-    marca?: string
-    unidad?: string
-    stock: number
-}
+// export interface Product {
+//     id: string | number
+//     nombre: string
+//     precio?: number
+//     precioMetro?: number | null
+//     metrosPorCaja?: number
+//     imagenPrincipal?: string
+//     marca?: string
+//     unidad?: string
+//     stock: number
+// }
 
 export interface CartItem {
     id: string | number
     nombre: string
     precio: number
-    precioMetro?: number
+    precioMetro?: number | null
     metrosPorCaja: number
     imagenPrincipal?: string
     marca: string
@@ -70,7 +70,7 @@ export const useCartStore = defineStore('cart', () => {
                 imagenPrincipal: product.imagenPrincipal,
                 marca: product.marca || 'Sin marca',
                 unidad: product.unidad || 'caja',
-                stock: product.stock,
+                stock: product.stock ?? 0,
                 quantity: 1
             })
         }

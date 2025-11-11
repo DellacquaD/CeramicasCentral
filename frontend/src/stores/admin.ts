@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { supabase } from '../lib/supabase'
-import type { Database } from '../types/database.types'
+import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.types'
 
 // type Brand = Database['public']['Tables']['brands']['Row']
 type BrandInsert = Database['public']['Tables']['brands']['Insert']

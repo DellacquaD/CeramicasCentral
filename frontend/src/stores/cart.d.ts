@@ -1,0 +1,122 @@
+import type { ProductoAPI } from "./products.ts";
+export interface CartItem {
+    id: string | number;
+    nombre: string;
+    precio: number;
+    precioMetro?: number | null;
+    metrosPorCaja: number;
+    imagenPrincipal?: string;
+    marca: string;
+    unidad: string;
+    stock: number;
+    quantity: number;
+}
+export declare const useCartStore: import("pinia").StoreDefinition<"cart", Pick<{
+    items: import("vue").Ref<{
+        id: string | number;
+        nombre: string;
+        precio: number;
+        precioMetro?: number | null | undefined;
+        metrosPorCaja: number;
+        imagenPrincipal?: string | undefined;
+        marca: string;
+        unidad: string;
+        stock: number;
+        quantity: number;
+    }[], CartItem[] | {
+        id: string | number;
+        nombre: string;
+        precio: number;
+        precioMetro?: number | null | undefined;
+        metrosPorCaja: number;
+        imagenPrincipal?: string | undefined;
+        marca: string;
+        unidad: string;
+        stock: number;
+        quantity: number;
+    }[]>;
+    itemCount: import("vue").ComputedRef<number>;
+    totalPrice: import("vue").ComputedRef<number>;
+    isEmpty: import("vue").ComputedRef<boolean>;
+    addItem: (product: ProductoAPI) => void;
+    removeItem: (productId: string | number) => void;
+    updateQuantity: (productId: string | number, quantity: number) => void;
+    clearCart: () => void;
+    checkout: () => void;
+    loadFromLocalStorage: () => void;
+    getItemById: (productId: string | number) => CartItem | undefined;
+    isInCart: (productId: string | number) => boolean;
+    getItemQuantity: (productId: string | number) => number;
+}, "items">, Pick<{
+    items: import("vue").Ref<{
+        id: string | number;
+        nombre: string;
+        precio: number;
+        precioMetro?: number | null | undefined;
+        metrosPorCaja: number;
+        imagenPrincipal?: string | undefined;
+        marca: string;
+        unidad: string;
+        stock: number;
+        quantity: number;
+    }[], CartItem[] | {
+        id: string | number;
+        nombre: string;
+        precio: number;
+        precioMetro?: number | null | undefined;
+        metrosPorCaja: number;
+        imagenPrincipal?: string | undefined;
+        marca: string;
+        unidad: string;
+        stock: number;
+        quantity: number;
+    }[]>;
+    itemCount: import("vue").ComputedRef<number>;
+    totalPrice: import("vue").ComputedRef<number>;
+    isEmpty: import("vue").ComputedRef<boolean>;
+    addItem: (product: ProductoAPI) => void;
+    removeItem: (productId: string | number) => void;
+    updateQuantity: (productId: string | number, quantity: number) => void;
+    clearCart: () => void;
+    checkout: () => void;
+    loadFromLocalStorage: () => void;
+    getItemById: (productId: string | number) => CartItem | undefined;
+    isInCart: (productId: string | number) => boolean;
+    getItemQuantity: (productId: string | number) => number;
+}, "itemCount" | "totalPrice" | "isEmpty">, Pick<{
+    items: import("vue").Ref<{
+        id: string | number;
+        nombre: string;
+        precio: number;
+        precioMetro?: number | null | undefined;
+        metrosPorCaja: number;
+        imagenPrincipal?: string | undefined;
+        marca: string;
+        unidad: string;
+        stock: number;
+        quantity: number;
+    }[], CartItem[] | {
+        id: string | number;
+        nombre: string;
+        precio: number;
+        precioMetro?: number | null | undefined;
+        metrosPorCaja: number;
+        imagenPrincipal?: string | undefined;
+        marca: string;
+        unidad: string;
+        stock: number;
+        quantity: number;
+    }[]>;
+    itemCount: import("vue").ComputedRef<number>;
+    totalPrice: import("vue").ComputedRef<number>;
+    isEmpty: import("vue").ComputedRef<boolean>;
+    addItem: (product: ProductoAPI) => void;
+    removeItem: (productId: string | number) => void;
+    updateQuantity: (productId: string | number, quantity: number) => void;
+    clearCart: () => void;
+    checkout: () => void;
+    loadFromLocalStorage: () => void;
+    getItemById: (productId: string | number) => CartItem | undefined;
+    isInCart: (productId: string | number) => boolean;
+    getItemQuantity: (productId: string | number) => number;
+}, "addItem" | "removeItem" | "updateQuantity" | "clearCart" | "checkout" | "loadFromLocalStorage" | "getItemById" | "isInCart" | "getItemQuantity">>;

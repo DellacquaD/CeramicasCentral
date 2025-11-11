@@ -134,7 +134,7 @@ const handleLogin = async () => {
     const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('*')
-        .eq('email', authData.user.email)
+        .eq('email', authData.user.email!)
         .single()
 
     if (adminError || !adminData) {

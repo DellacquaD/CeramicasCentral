@@ -205,10 +205,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useProductsStore } from '@/stores/products'
-import { useAdminStore } from '@/stores/admin'
 
 const productsStore = useProductsStore()
-const adminStore = useAdminStore()
 const loading = ref(true)
 const recentProducts = ref<any[]>([])
 
@@ -218,7 +216,7 @@ const stats = computed(() => ({
   totalCategories: productsStore.categories.length,
   totalSubcategories: productsStore.subcategories.length,
   totalBrands: productsStore.brands.length,
-  activeBrands: productsStore.brands.filter(b => b.is_active).length,
+  activeBrands: productsStore.brands.filter((b: any) => b.is_active).length,
   totalTags: productsStore.tags.length,
   totalColors: productsStore.colors.length,
   totalMaterials: productsStore.materials.length
