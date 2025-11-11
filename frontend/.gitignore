@@ -27,3 +27,14 @@ dist-ssr
 .env
 .env.local
 .env*.local
+# Archivos generados por TypeScript
+src/**/*.js
+src/**/*.jsx
+src/**/*.vue.js
+src/**/*.vue.d.ts
+!src/**/*.config.js
+
+# Archivos .js generados (NO los .d.ts)
+src/**/*.vue.js
+src/router/*.js
+!src/**/*.config.js
