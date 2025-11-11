@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type {ProductoAPI} from "./products.ts";
 
 // Interfaces
 export interface Product {
@@ -47,7 +48,7 @@ export const useCartStore = defineStore('cart', () => {
     const isEmpty = computed((): boolean => items.value.length === 0)
 
     // Actions
-    const addItem = (product: Product): void => {
+    const addItem = (product: ProductoAPI): void => {
         const existingItem = items.value.find(item => item.id === product.id)
 
         if (existingItem) {

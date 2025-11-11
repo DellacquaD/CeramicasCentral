@@ -117,9 +117,9 @@
                 <span v-if="product.enOferta" class="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">OFERTA</span>
               </div>
 
-              <div class="absolute bottom-2 right-2">
+              <div v-if="product.stock !== null" class="absolute bottom-2 right-2">
                 <span :class="['px-2 py-1 rounded-md text-xs font-semibold', product.stock > 50 ? 'bg-green-100 text-green-800' : product.stock > 10 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800']">
-                  Stock: {{ parseInt(product.stock.toFixed(2)) }} {{ product.unidad }}
+                  Stock: {{ parseInt(product.stock.toFixed(2)) }} {{ product.unidad || 'u' }}
                 </span>
               </div>
             </div>
@@ -226,33 +226,9 @@ import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline
 import { useCartStore } from '../stores/cart'
 import { useProductsStore } from '../stores/products'
 import { useCotizacion } from '../services/cotizacionService'
+import type { ProductoAPI } from '../stores/products'
 
-// Interfaces
-interface ProductoAPI {
-  id: string | number
-  nombre: string
-  descripcion: string
-  marca: string
-  categoria: string[]
-  subcategoria?: string
-  precio?: number
-  precioMetro: number
-  precioAnterior?: number
-  metrosPorCaja: number
-  stock: number
-  unidad: string
-  medidas?: string
-  color?: string
-  pei?: number
-  imagenPrincipal?: string
-  disponible: boolean
-  activo: boolean
-  nuevo?: boolean
-  enOferta?: boolean
-  slug: string
-  tags?: string[]
-}
-
+// Interfaz extendida con precios en UYU
 interface ProductoConPrecioUYU extends ProductoAPI {
   precioUYU: number
   precioMetroUYU: number
@@ -311,14 +287,17 @@ const goToProduct = (product: ProductoAPI): void => {
 // Computed
 const productosFiltradosPorCategoria = computed((): ProductoAPI[] => {
   if (props.categorySlug) {
-    return productsStore.getProductosByCategoria(props.categorySlug)
+    // Usar el método formateado para mantener compatibilidad con el código existente
+    return productsStore.getProductosByCategoriaFormateado(props.categorySlug)
   }
-  return productsStore.productosActivos
+  // Usar productosActivosFormateados para mantener compatibilidad
+  return productsStore.productosActivosFormateados
 })
 
 const productosFiltrados = computed((): ProductoAPI[] => {
   let result = productosFiltradosPorCategoria.value
 
+  // Búsqueda por término
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase().trim()
 
@@ -340,16 +319,16 @@ const productosFiltrados = computed((): ProductoAPI[] => {
   // Ordenamiento
   switch (sortBy.value) {
     case 'price-low':
-      result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
+      result = [...result].sort((a, b) => (a.price || 0) - (b.price || 0))
       break
     case 'price-high':
-      result = [...result].sort((a, b) => (b.precio || 0) - (a.precio || 0))
+      result = [...result].sort((a, b) => (b.price || 0) - (a.price || 0))
       break
     case 'stock':
-      result = [...result].sort((a, b) => b.stock - a.stock)
+      result = [...result].sort((a, b) => (b.stock || 0) - (a.stock || 0))
       break
     default:
-      result = [...result].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      result = [...result].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }
 
   return result
@@ -358,8 +337,8 @@ const productosFiltrados = computed((): ProductoAPI[] => {
 const productosConPreciosUYU = computed((): ProductoConPrecioUYU[] => {
   return productosFiltrados.value.map(producto => ({
     ...producto,
-    precioUYU: (producto.precioMetro * producto.metrosPorCaja * cotizacionUSD.value),
-    precioMetroUYU: (producto.precioMetro * cotizacionUSD.value)
+    precioUYU: ((producto.precioMetro || 0) * (producto.metrosPorCaja || 1) * cotizacionUSD.value),
+    precioMetroUYU: ((producto.precioMetro || 0) * cotizacionUSD.value)
   }))
 })
 
@@ -402,6 +381,16 @@ const displayPages = computed((): (number | string)[] => {
 
 const pageTitle = computed((): string => {
   if (props.categorySlug) {
+    // Buscar la categoría en el store para obtener el nombre real
+    const categoria = productsStore.categories.find(c =>
+        c.slug.toLowerCase() === props.categorySlug?.toLowerCase()
+    )
+
+    if (categoria) {
+      return categoria.name
+    }
+
+    // Fallback a nombres hardcodeados si no se encuentra
     const names: Record<string, string> = {
       pisos: 'Pisos',
       revestimientos: 'Revestimientos',
@@ -426,10 +415,10 @@ watch(searchTerm, () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Solo cargar cotización, los productos ya fueron cargados en App.vue
+  // Cargar cotización
   await cargarCotizacion()
 
-  // Si por alguna razón no se cargaron, intentar cargarlos aquí
+  // Si por alguna razón no se cargaron los productos, intentar cargarlos aquí
   if (!productsStore.initialized) {
     await productsStore.cargarProductos()
   }
