@@ -14,14 +14,19 @@ export function useProducts() {
 
     const cargarSiEsNecesario = async () => {
         if (!store.initialized) {
-            await store.cargarProductos()
+            await Promise.all([
+                store.cargarProductos(),
+                store.cargarCotizacion()
+            ])
         }
     }
 
     return {
         store,
-        productos: computed(() => store.productosActivos),
+        productos: computed(() => store.productosActivosEnUYU),
+        categorias: computed(() => store.categories),
         loading: computed(() => store.loading),
+        cotizacion: computed(() => store.cotizacionUSD),
         error: computed(() => store.error),
         cargarSiEsNecesario,
         cargar: store.cargarProductos
@@ -130,8 +135,8 @@ export function filtrarPorPrecio(
     precioMax?: number
 ): ProductoCompleto[] {
     return productos.filter(p => {
-        if (precioMin !== undefined && p.precio < precioMin) return false
-        if (precioMax !== undefined && p.precio > precioMax) return false
+        if (precioMin !== undefined && p.price < precioMin) return false
+        if (precioMax !== undefined && p.price > precioMax) return false
         return true
     })
 }
@@ -149,13 +154,13 @@ export function ordenarProductos(
 
     switch (orden) {
         case 'precio-asc':
-            return copia.sort((a, b) => a.precio - b.precio)
+            return copia.sort((a, b) => a.price - b.price)
         case 'precio-desc':
-            return copia.sort((a, b) => b.precio - a.precio)
+            return copia.sort((a, b) => b.price - a.price)
         case 'nombre-asc':
-            return copia.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+            return copia.sort((a, b) => a.name.localeCompare(b.name, 'es'))
         case 'nombre-desc':
-            return copia.sort((a, b) => b.nombre.localeCompare(a.nombre, 'es'))
+            return copia.sort((a, b) => b.name.localeCompare(a.name, 'es'))
         case 'nuevo':
             return copia.sort((a, b) => {
                 if (a.nuevo && !b.nuevo) return -1
@@ -329,11 +334,11 @@ export function generarMetaSEO(producto: ProductoCompleto): {
     const tags = producto.tags.map(t => t.name)
 
     return {
-        title: `${producto.nombre} - ${marca} | Cerámicas Central`,
-        description: producto.descripcion ||
-            `${producto.nombre} de ${marca}. ${categorias}. Disponible en Cerámicas Central.`,
+        title: `${producto.name} - ${marca} | Cerámicas Central`,
+        description: producto.description ||
+            `${producto.name} de ${marca}. ${categorias}. Disponible en Cerámicas Central.`,
         keywords: [
-            producto.nombre,
+            producto.name,
             marca,
             ...producto.categories.map(c => c.name),
             ...tags,

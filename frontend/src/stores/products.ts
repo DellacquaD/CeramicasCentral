@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../types/database.types'
+import {useCotizacion} from "@/services/cotizacionService.ts";
 
 // Tipos derivados de la base de datos
 // type Product = Database['public']['Tables']['products']['Row']
@@ -17,18 +18,18 @@ type Tag = Database['public']['Tables']['tags']['Row']
 export interface ProductoCompleto {
     // Campos base del producto
     id: string
-    nombre: string
-    descripcion: string | null
+    name: string
+    description: string | null
     sku: string
     slug: string
-    precio: number
+    price: number
     precio_anterior: number | null
     precio_metro: number | null
     stock: number | null
-    unidad: string | null
+    unit: string | null
     medidas: string | null
     metros_por_caja: number | null
-    moneda: string | null
+    currency: string | null
     pei: string | null
     activo: boolean | null
     disponible: boolean | null
@@ -82,6 +83,12 @@ export interface ProductoAPI {
     destacado: boolean
 }
 
+export interface ProductoAPIUYU extends ProductoAPI {
+    precioUYU: number
+    precioMetroUYU: number
+    precioPorCajaUYU: number
+}
+
 export const useProductsStore = defineStore('products', () => {
     // Estado
     const productos = ref<ProductoCompleto[]>([])
@@ -97,6 +104,9 @@ export const useProductsStore = defineStore('products', () => {
     const materials = ref<Material[]>([])
     const tags = ref<Tag[]>([])
 
+    const cotizacionUSD = ref<number>(42)
+    const { obtenerCotizacion } = useCotizacion()
+
     // Computed
     const productosActivos = computed(() =>
         productos.value.filter(p => p.disponible && p.activo)
@@ -110,21 +120,27 @@ export const useProductsStore = defineStore('products', () => {
         return productosActivos.value.map((p: ProductoCompleto) => transformarProducto(p))
     })
 
+    const productosActivosEnUYU = computed((): ProductoAPIUYU[] => {
+        return productosActivosFormateados.value.map(producto =>
+            convertirPreciosAUYU(producto)
+        )
+    })
+
     // Transformar producto completo al formato antiguo
     const transformarProducto = (producto: ProductoCompleto): ProductoAPI => {
         return {
             id: producto.id,
-            nombre: producto.nombre,
-            descripcion: producto.descripcion,
+            nombre: producto.name,
+            descripcion: producto.description,
             marca: producto.brand?.name || '',
             categoria: producto.categories.map((c: Category) => c.name),
             subcategoria: producto.subcategories.find((s: Subcategory) => s)?.name,
-            precio: producto.precio,
+            precio: producto.price,
             precioMetro: producto.precio_metro,
             precioAnterior: producto.precio_anterior,
             metrosPorCaja: producto.metros_por_caja,
             stock: producto.stock,
-            unidad: producto.unidad,
+            unidad: producto.unit,
             medidas: producto.medidas,
             color: producto.color?.name,
             pei: producto.pei,
@@ -171,9 +187,7 @@ export const useProductsStore = defineStore('products', () => {
         }
     }
 
-    // Cargar productos con todas sus relaciones
     const cargarProductos = async (forzar: boolean = false): Promise<void> => {
-        // Si ya están cargados y no se fuerza, no hacer nada
         if (initialized.value && !forzar) {
             console.log('✅ Productos ya cargados, usando caché local')
             return
@@ -185,39 +199,39 @@ export const useProductsStore = defineStore('products', () => {
         try {
             console.log('🔄 Cargando productos desde Supabase...')
 
-            // Primero cargar las referencias si no están cargadas
             if (brands.value.length === 0) {
                 await cargarReferencias()
             }
 
-            // Cargar productos con sus relaciones
             const { data: productosData, error: productosError } = await supabase
                 .from('products')
                 .select(`
-                    *,
-                    brand:brands(*),
-                    color:colors(*),
-                    material:materials(*),
-                    images:product_images(*),
-                    product_categories(
-                        category:categories(*)
-                    ),
-                    product_subcategories(
-                        subcategory:subcategories(*)
-                    ),
-                    product_tags(
-                        tag:tags(*)
-                    )
-                `)
+                *,
+                brand:brands(*),
+                color:colors(*),
+                material:materials(*),
+                images:product_images(*),
+                product_categories(
+                    category:categories(*)
+                ),
+                product_subcategories(
+                    subcategory:subcategories(*)
+                ),
+                product_tags(
+                    tag:tags(*)
+                )
+            `)
                 .eq('activo', true)
                 .eq('disponible', true)
                 .order('created_at', { ascending: false })
 
             if (productosError) throw productosError
 
-            // Transformar la estructura de datos
+            // 🔍 DEBUG: Ver datos crudos
+            console.log('📦 Datos crudos de Supabase:', productosData?.slice(0, 2))
+
             if (productosData) {
-                productos.value = productosData.map(p => ({
+                productos.value = productosData.map((p : any) => ({
                     ...p,
                     brand: p.brand || undefined,
                     color: p.color || undefined,
@@ -238,6 +252,17 @@ export const useProductsStore = defineStore('products', () => {
                         .filter(Boolean)
                 }))
 
+                // 🔍 DEBUG: Ver productos transformados
+                console.log('✨ Productos transformados:', productos.value.slice(0, 2))
+                console.log('📊 Total productos:', productos.value.length)
+
+                // 🔍 DEBUG: Ver un producto formateado
+                const primerProducto = productos.value[0]
+                if (primerProducto) {  // ✅ Verificar que existe
+                    const productoFormateado = transformarProducto(primerProducto)
+                    console.log('🎯 Producto formateado (ejemplo):', productoFormateado)
+                }
+
                 initialized.value = true
                 console.log('✅ Productos cargados:', productos.value.length)
             }
@@ -247,6 +272,31 @@ export const useProductsStore = defineStore('products', () => {
             error.value = err instanceof Error ? err.message : 'Error desconocido'
         } finally {
             loading.value = false
+        }
+    }
+
+    const convertirPreciosAUYU = (producto: ProductoAPI): ProductoAPIUYU => {
+        const cotizacion = cotizacionUSD.value || 42
+
+        const precioPorCaja = producto.precioMetro
+            ? (producto.precioMetro * (producto.metrosPorCaja || 1))
+            : (producto.precio || 0)
+
+        return {
+            ...producto,
+            precioUYU: producto.precio * cotizacion,
+            precioMetroUYU: (producto.precioMetro || 0) * cotizacion,
+            precioPorCajaUYU: precioPorCaja * cotizacion
+        }
+    }
+
+    const cargarCotizacion = async (): Promise<void> => {
+        try {
+            const valor = await obtenerCotizacion()
+            cotizacionUSD.value = valor
+            console.log('✅ Cotización cargada:', valor)
+        } catch (error) {
+            console.error('❌ Error al cargar cotización, usando valor por defecto')
         }
     }
 
@@ -323,12 +373,22 @@ export const useProductsStore = defineStore('products', () => {
         return productosActivos.value.filter(p => p.en_oferta)
     }
 
+    const getProductosByCategoriaConUYU = (categoria: string): ProductoAPIUYU[] => {
+        const productosFormateados = getProductosByCategoriaFormateado(categoria)
+        return productosFormateados.map(p => convertirPreciosAUYU(p))
+    }
+
+    const getProductoBySlugConUYU = (slug: string): ProductoAPIUYU | undefined => {
+        const producto = getProductoBySlugFormateado(slug)
+        return producto ? convertirPreciosAUYU(producto) : undefined
+    }
+
     // Buscar productos
     const buscarProductos = (termino: string): ProductoCompleto[] => {
         const terminoLower = termino.toLowerCase()
         return productosActivos.value.filter(p =>
-            p.nombre.toLowerCase().includes(terminoLower) ||
-            p.descripcion?.toLowerCase().includes(terminoLower) ||
+            p.name.toLowerCase().includes(terminoLower) ||
+            p.description?.toLowerCase().includes(terminoLower) ||
             p.sku.toLowerCase().includes(terminoLower) ||
             p.brand?.name.toLowerCase().includes(terminoLower) ||
             p.categories.some((c: Category) => c.name.toLowerCase().includes(terminoLower)) ||
@@ -342,6 +402,7 @@ export const useProductsStore = defineStore('products', () => {
         loading,
         error,
         initialized,
+        cotizacionUSD,
 
         // Referencias
         brands,
@@ -355,10 +416,13 @@ export const useProductsStore = defineStore('products', () => {
         productosActivos,
         productosFormateados,
         productosActivosFormateados,
+        productosActivosEnUYU,
 
         // Métodos
         cargarProductos,
         cargarReferencias,
+        cargarCotizacion,
+        convertirPreciosAUYU,
 
         // Getters formato completo
         getProductoBySlug,
@@ -374,6 +438,8 @@ export const useProductsStore = defineStore('products', () => {
         // Getters formato antiguo (para compatibilidad)
         getProductoBySlugFormateado,
         getProductosByCategoriaFormateado,
+        getProductoBySlugConUYU,
+        getProductosByCategoriaConUYU,
 
         // Utilidades
         transformarProducto

@@ -41,7 +41,7 @@
             <MoonIcon v-else class="w-6 h-6 text-slate-600 group-hover:text-slate-700 transition-colors" />
           </button>
 
-          <!-- Cart Button -->
+<!--           Cart Button -->
 <!--          <router-link-->
 <!--              to="/carrito"-->
 <!--              class="relative flex items-center space-x-3 px-6 py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-xl hover:bg-gray-800 dark:hover:bg-gray-600 transition-all duration-200 shadow-lg hover:shadow-xl group"-->
@@ -146,10 +146,10 @@ const emit = defineEmits<{
 // Navigation items
 const navigationItems = ref([
   { name: 'Inicio', path: '/' },
-  { name: 'Productos', path: '/productos' },
-  { name: 'Categorías', path: '/categorias' },
-  { name: 'Ofertas', path: '/ofertas' },
-  { name: 'Contacto', path: '/contacto' }
+  { name: 'Productos', path: '/products' },
+  { name: 'Categorías', path: '/categories' },
+  { name: 'Ofertas', path: '/offers' },
+  { name: 'Contacto', path: '/contact' }
 ])
 
 // Mobile menu state

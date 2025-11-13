@@ -19,19 +19,19 @@ import AdminCategories from '@/views/admin/AdminCategories.vue'
 import AdminColors from '@/views/admin/AdminColors.vue'
 import AdminMaterials from '@/views/admin/AdminMaterials.vue'
 import AdminTags from '@/views/admin/AdminTags.vue'
-import HeroSection from "@/components/HeroSection.vue";
+import Home from "@/views/Home.vue";
 
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'Home',
-        component: HeroSection,
+        component: Home,
         meta: {
             title: 'Inicio - CerámicasCentral'
         }
     },
     {
-        path: '/categorias',
+        path: '/categories',
         name: 'Categories',
         component: Categories,
         meta: {
@@ -39,16 +39,12 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/categoria/:categorySlug',
-        name: 'CategoryProducts',
-        component: Products,
-        props: true,
-        meta: {
-            title: 'Productos - CerámicasCentral'
-        }
+        path: '/categories/:slug',
+        name: 'category-detail',
+        component: Categories
     },
     {
-        path: '/productos',
+        path: '/products',
         name: 'Products',
         component: Products,
         meta: {
@@ -56,7 +52,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/producto/:productSlug',
+        path: '/product/:productSlug',
         name: 'ProductDetail',
         component: ProductDetail,
         props: true,
@@ -65,7 +61,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/ofertas',
+        path: '/offers',
         name: 'Offers',
         component: Offers,
         meta: {
@@ -73,7 +69,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/carrito',
+        path: '/cart',
         name: 'Cart',
         component: Cart,
         meta: {
@@ -81,7 +77,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/nosotros',
+        path: '/about',
         name: 'About',
         component: About,
         meta: {
@@ -89,7 +85,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/contacto',
+        path: '/contact',
         name: 'Contact',
         component: Contact,
         meta: {
@@ -97,7 +93,7 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
-        path: '/buscar',
+        path: '/search',
         name: 'Search',
         component: () => import('../views/Search.vue'), // Lazy loading
         meta: {

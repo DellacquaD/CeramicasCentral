@@ -181,7 +181,7 @@
           </button>
 
           <router-link
-              to="/carrito"
+              to="/cart"
               @click="$emit('close')"
               class="block w-full text-center border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-3 rounded-xl transition-colors"
           >

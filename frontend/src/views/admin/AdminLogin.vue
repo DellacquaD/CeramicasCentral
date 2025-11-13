@@ -102,6 +102,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import {useAuthStore} from "@/stores/auth.ts";
 
 const router = useRouter()
 
@@ -116,45 +117,16 @@ const handleLogin = async () => {
   error.value = ''
 
   try {
-    // 1. Autenticar con Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value
-    })
+    const authStore = useAuthStore()
 
-    if (authError) {
-      throw new Error(authError.message)
-    }
+    // Usar el método del store que ya maneja todo
+    await authStore.login(email.value, password.value)
 
-    if (!authData.user) {
-      throw new Error('No se pudo autenticar')
-    }
+    console.log('Login exitoso')
 
-    // 2. Verificar si el usuario es admin
-    const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', authData.user.email!)
-        .single()
-
-    if (adminError || !adminData) {
-      // Cerrar sesión si no es admin
-      await supabase.auth.signOut()
-      throw new Error('No tienes permisos de administrador')
-    }
-
-    // 3. Login exitoso - redirigir al dashboard
-    console.log('Login exitoso:', authData.user.email)
-
-    // Guardar en localStorage si quieres
-    localStorage.setItem('admin_session', JSON.stringify({
-      email: authData.user.email,
-      id: authData.user.id
-    }))
-
-    // Redirigir al dashboard o a la ruta deseada
+    // Redirigir
     const redirectPath = router.currentRoute.value.query.redirect as string
-    router.push(redirectPath || '/admin')
+    await router.push(redirectPath || '/admin')
 
   } catch (err: any) {
     console.error('Error en login:', err)
@@ -163,4 +135,5 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
 </script>

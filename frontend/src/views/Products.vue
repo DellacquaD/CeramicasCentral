@@ -2,29 +2,31 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Loading State -->
-      <div v-if="productsStore.loading" class="flex justify-center items-center h-64">
+      <div v-if="loading" class="flex justify-center items-center h-64">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <span class="ml-3 text-gray-600 dark:text-gray-400">Cargando productos...</span>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="productsStore.error" class="text-center py-20">
+      <div v-else-if="error" class="text-center py-20">
         <div class="text-red-600 dark:text-red-400 mb-4">
           <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
           </svg>
           <p class="text-xl font-semibold">Error al cargar productos</p>
-          <p class="text-gray-600 dark:text-gray-400 mt-2">{{ productsStore.error }}</p>
+          <p class="text-gray-600 dark:text-gray-400 mt-2">{{ error }}</p>
         </div>
-        <button
-            @click="productsStore.cargarProductos(true)"
-            class="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-200"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          <span>Reintentar</span>
-        </button>
+<!--        <button -->
+<!--            @click="cargar"-->
+<!--            class="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-200"-->
+<!--        >-->
+<!--          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
+<!--            <path stroke-lin
+
+ecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>-->
+<!--          </svg>-->
+<!--          <span>Reintentar</span>-->
+<!--        </button>-->
       </div>
 
       <!-- Content -->
@@ -50,7 +52,6 @@
               <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 {{ pageTitle }}
               </h1>
-
               <div class="flex items-center gap-4">
                 <p class="text-gray-600 dark:text-gray-400">
                   {{ productosFiltrados.length }} productos
@@ -90,7 +91,7 @@
         <!-- Products grid -->
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           <div
-              v-for="product in paginatedProductsConPrecios"
+              v-for="product in paginatedProducts"
               :key="product.id"
               class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col"
           >
@@ -138,7 +139,7 @@
                 <div class="mb-3">
                   <span v-if="product.precioAnterior && product.precioAnterior > 0"
                         class="text-sm text-gray-500 line-through mr-2">
-                    ${{ formatearPrecio(product.precioAnterior * cotizacionUSD) }}
+                    ${{ formatearPrecio(product.precioAnterior * product.precioUYU / product.precio) }}
                   </span>
 
                   <div class="flex items-center justify-between mx-3">
@@ -224,9 +225,9 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MagnifyingGlassIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
 import { useCartStore } from '@/stores/cart'
-import { useProductsStore } from '@/stores/products'
+import { useProducts } from '@/composables/useProducts'
 import { useCotizacion } from '@/services/cotizacionService'
-import type { ProductoAPI } from '@/stores/products'
+import type {ProductoAPI, ProductoAPIUYU} from '@/stores/products'
 
 // Interfaz extendida con precios en UYU
 interface ProductoConPrecioUYU extends ProductoAPI {
@@ -244,7 +245,9 @@ const props = defineProps<Props>()
 // Router y Stores
 const router = useRouter()
 const cartStore = useCartStore()
-const productsStore = useProductsStore()
+
+// Usar el composable
+const { store, productos, loading, error, cargarSiEsNecesario } = useProducts()
 
 // Cotización
 const cotizacionUSD = ref<number>(42)
@@ -257,6 +260,7 @@ const currentPage = ref<number>(1)
 const itemsPerPage = 12
 
 // Methods
+
 const cargarCotizacion = async (): Promise<void> => {
   try {
     const valor = await obtenerCotizacion()
@@ -267,7 +271,7 @@ const cargarCotizacion = async (): Promise<void> => {
   }
 }
 
-const addToCart = (product: ProductoAPI): void => {
+const addToCart = (product: ProductoConPrecioUYU): void => {
   cartStore.addItem(product)
 }
 
@@ -281,20 +285,18 @@ const goToProduct = (product: ProductoAPI): void => {
     console.error('El producto no tiene slug:', product)
     return
   }
-  router.push(`/producto/${product.slug}`)
+  router.push(`/product/${product.slug}`)
 }
 
 // Computed
-const productosFiltradosPorCategoria = computed((): ProductoAPI[] => {
+const productosFiltradosPorCategoria = computed((): ProductoAPIUYU[] => {
   if (props.categorySlug) {
-    // Usar el método formateado para mantener compatibilidad con el código existente
-    return productsStore.getProductosByCategoriaFormateado(props.categorySlug)
+    return store.getProductosByCategoriaConUYU(props.categorySlug)
   }
-  // Usar productosActivosFormateados para mantener compatibilidad
-  return productsStore.productosActivosFormateados
+  return productos.value
 })
 
-const productosFiltrados = computed((): ProductoAPI[] => {
+const productosFiltrados = computed((): ProductoAPIUYU[] => {
   let result = productosFiltradosPorCategoria.value
 
   // Búsqueda por término
@@ -319,10 +321,10 @@ const productosFiltrados = computed((): ProductoAPI[] => {
   // Ordenamiento
   switch (sortBy.value) {
     case 'price-low':
-      result = [...result].sort((a, b) => (a.precio || 0) - (b.precio || 0))
+      result = [...result].sort((a, b) => a.precioPorCajaUYU - b.precioPorCajaUYU)
       break
     case 'price-high':
-      result = [...result].sort((a, b) => (b.precio || 0) - (a.precio || 0))
+      result = [...result].sort((a, b) => b.precioPorCajaUYU - a.precioPorCajaUYU)
       break
     case 'stock':
       result = [...result].sort((a, b) => (b.stock || 0) - (a.stock || 0))
@@ -334,17 +336,9 @@ const productosFiltrados = computed((): ProductoAPI[] => {
   return result
 })
 
-const productosConPreciosUYU = computed((): ProductoConPrecioUYU[] => {
-  return productosFiltrados.value.map(producto => ({
-    ...producto,
-    precioUYU: ((producto.precioMetro || 0) * (producto.metrosPorCaja || 1) * cotizacionUSD.value),
-    precioMetroUYU: ((producto.precioMetro || 0) * cotizacionUSD.value)
-  }))
-})
-
-const paginatedProductsConPrecios = computed((): ProductoConPrecioUYU[] => {
+const paginatedProducts = computed((): ProductoAPIUYU[] => {
   const start = (currentPage.value - 1) * itemsPerPage
-  return productosConPreciosUYU.value.slice(start, start + itemsPerPage)
+  return productosFiltrados.value.slice(start, start + itemsPerPage)
 })
 
 const totalPages = computed((): number => {
@@ -381,8 +375,7 @@ const displayPages = computed((): (number | string)[] => {
 
 const pageTitle = computed((): string => {
   if (props.categorySlug) {
-    // Buscar la categoría en el store para obtener el nombre real
-    const categoria = productsStore.categories.find(c =>
+    const categoria = store.categories.find(c =>
         c.slug.toLowerCase() === props.categorySlug?.toLowerCase()
     )
 
@@ -390,7 +383,6 @@ const pageTitle = computed((): string => {
       return categoria.name
     }
 
-    // Fallback a nombres hardcodeados si no se encuentra
     const names: Record<string, string> = {
       pisos: 'Pisos',
       revestimientos: 'Revestimientos',
@@ -415,18 +407,14 @@ watch(searchTerm, () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Cargar cotización
-  await cargarCotizacion()
+  // Cargar productos si es necesario
+  await cargarSiEsNecesario()
 
-  // Si por alguna razón no se cargaron los productos, intentar cargarlos aquí
-  if (!productsStore.initialized) {
-    await productsStore.cargarProductos()
-  }
+
 })
 </script>
 
 <style scoped>
-
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-box-orient: vertical;

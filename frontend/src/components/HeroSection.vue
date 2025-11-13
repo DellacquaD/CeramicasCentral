@@ -1,6 +1,6 @@
 <template>
   <section class="relative overflow-hidden bg-gray-100 dark:bg-gray-900 h-[350px] sm:h-[400px] lg:h-[450px]">
-    <!-- Loading Splash (solo en este componente) -->
+    <!-- Loading Splash -->
     <transition name="splash">
       <div
           v-if="isLoading"
@@ -66,19 +66,31 @@
                   </div>
 
                   <p class="text-blue-400 text-sm font-bold mb-2 uppercase">{{ slide.left.marca }}</p>
-                  <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight line-clamp-2">{{ slide.left.nombre }}</h2>
+                  <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight line-clamp-2">
+                    {{ slide.left.nombre }}
+                  </h2>
 
                   <div class="mb-4">
+                    <!-- ✅ Precio anterior con cálculo proporcional -->
                     <div v-if="slide.left.precioAnterior && slide.left.precioAnterior > 0" class="flex items-center justify-center gap-2 mb-1">
-                      <span class="text-lg text-red-300 line-through">${{ formatearPrecio(slide.left.precioAnterior * cotizacion) }}</span>
-                      <span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">-{{ calcularDescuento(slide.left) }}%</span>
+                      <span class="text-lg text-red-300 line-through">
+                        ${{ formatearPrecio(calcularPrecioAnteriorUYU(slide.left)) }}
+                      </span>
+                      <span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                        -{{ calcularDescuento(slide.left) }}%
+                      </span>
                     </div>
 
+                    <!-- ✅ Precio por caja en UYU -->
                     <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1">
-                      ${{ formatearPrecio(slide.left.precioMetro * slide.left.metrosPorCaja * cotizacion) }}<span class="text-2xl sm:text-3xl lg:text-4xl">📦</span>
+                      ${{ formatearPrecio(slide.left.precioPorCajaUYU) }}
+                      <span class="text-2xl sm:text-3xl lg:text-4xl">📦</span>
                     </div>
 
-                    <p class="text-white/80 text-sm">${{ formatearPrecio(slide.left.precioMetro * cotizacion) }} m²</p>
+                    <!-- ✅ Precio por metro en UYU -->
+                    <p class="text-white/80 text-sm">
+                      ${{ formatearPrecio(slide.left.precioMetroUYU) }} m²
+                    </p>
                   </div>
 
                   <button
@@ -114,19 +126,31 @@
                   </div>
 
                   <p class="text-blue-400 text-sm font-bold mb-2 uppercase">{{ slide.right.marca }}</p>
-                  <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight line-clamp-2">{{ slide.right.nombre }}</h2>
+                  <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight line-clamp-2">
+                    {{ slide.right.nombre }}
+                  </h2>
 
                   <div class="mb-4">
+                    <!-- ✅ Precio anterior con cálculo proporcional -->
                     <div v-if="slide.right.precioAnterior && slide.right.precioAnterior > 0" class="flex items-center justify-center gap-2 mb-1">
-                      <span class="text-lg text-red-300 line-through">${{ formatearPrecio(slide.right.precioAnterior * cotizacion) }}</span>
-                      <span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">-{{ calcularDescuento(slide.right) }}%</span>
+                      <span class="text-lg text-red-300 line-through">
+                        ${{ formatearPrecio(calcularPrecioAnteriorUYU(slide.right)) }}
+                      </span>
+                      <span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                        -{{ calcularDescuento(slide.right) }}%
+                      </span>
                     </div>
 
+                    <!-- ✅ Precio por caja en UYU -->
                     <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-1">
-                      ${{ formatearPrecio(slide.right.precioMetro * slide.right.metrosPorCaja * cotizacion) }}<span class="text-2xl sm:text-3xl lg:text-4xl">📦</span>
+                      ${{ formatearPrecio(slide.right.precioPorCajaUYU) }}
+                      <span class="text-2xl sm:text-3xl lg:text-4xl">📦</span>
                     </div>
 
-                    <p class="text-white/80 text-sm">${{ formatearPrecio(slide.right.precioMetro * cotizacion) }} m²</p>
+                    <!-- ✅ Precio por metro en UYU -->
+                    <p class="text-white/80 text-sm">
+                      ${{ formatearPrecio(slide.right.precioMetroUYU) }} m²
+                    </p>
                   </div>
 
                   <button
@@ -185,34 +209,38 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useProductsStore } from '@/stores/products'
-import { useCotizacion } from '@/services/cotizacionService'
+import { useProducts } from '@/composables/useProducts'
+import type { ProductoAPIConUYU } from '@/stores/products'
 
 const router = useRouter()
-const productsStore = useProductsStore()
-const { obtenerCotizacion } = useCotizacion()
+
+// ✅ Usar el composable (ya trae productos con precios en UYU)
+const { store, productos, cargarSiEsNecesario } = useProducts()
 
 const currentSlide = ref(0)
 const autoplayInterval = ref<number | null>(null)
-const cotizacion = ref(42)
 const isLoading = ref(true)
 
+// ✅ Computed con productos que ya tienen precios en UYU
 const slides = computed(() => {
-  const productos = productsStore.productosActivos.filter(p => p.en_oferta || p.nuevo)
+  // Filtrar productos en oferta o nuevos
+  let productosDestacados = productos.value.filter(p => p.enOferta || p.nuevo)
 
-  if (productos.length < 6) {
-    const adicionales = productsStore.productosActivos
-        .filter(p => !productos.includes(p))
-        .slice(0, 6 - productos.length)
-    productos.push(...adicionales)
+  // Si no hay suficientes, agregar otros productos
+  if (productosDestacados.length < 6) {
+    const adicionales = productos.value
+        .filter(p => !productosDestacados.includes(p))
+        .slice(0, 6 - productosDestacados.length)
+    productosDestacados = [...productosDestacados, ...adicionales]
   }
 
-  const slidesArray: Array<{ left: any; right: any }> = []
-  for (let i = 0; i < productos.length; i += 2) {
-    if (productos[i] && productos[i + 1]) {
+  // Crear slides de 2 productos
+  const slidesArray: Array<{ left: ProductoAPIConUYU; right: ProductoAPIConUYU }> = []
+  for (let i = 0; i < productosDestacados.length; i += 2) {
+    if (productosDestacados[i] && productosDestacados[i + 1]) {
       slidesArray.push({
-        left: productos[i],
-        right: productos[i + 1]
+        left: productosDestacados[i],
+        right: productosDestacados[i + 1]
       })
     }
   }
@@ -224,9 +252,25 @@ const formatearPrecio = (precio: number): string => {
   return Math.round(precio).toLocaleString('es-UY')
 }
 
-const calcularDescuento = (product: any): number => {
+// ✅ Calcular precio anterior en UYU (proporcional)
+const calcularPrecioAnteriorUYU = (product: ProductoAPIConUYU): number => {
+  if (!product.precioAnterior) return 0
+
+  // Calcular ratio entre precio anterior y precio actual
+  const ratio = product.precioAnterior / product.precio
+
+  // Aplicar el mismo ratio al precio por caja en UYU
+  return product.precioPorCajaUYU * ratio
+}
+
+// ✅ Calcular descuento basado en precios USD originales
+const calcularDescuento = (product: ProductoAPIConUYU): number => {
   if (!product.precioAnterior || product.precioAnterior <= 0) return 0
-  const precioActual = product.precioMetro * product.metrosPorCaja
+
+  const precioActual = product.precioMetro && product.metrosPorCaja
+      ? product.precioMetro * product.metrosPorCaja
+      : product.precio
+
   const descuento = ((product.precioAnterior - precioActual) / product.precioAnterior) * 100
   return Math.round(descuento)
 }
@@ -266,36 +310,26 @@ const resetAutoplay = (): void => {
   startAutoplay()
 }
 
-const viewProduct = (product: any): void => {
-  router.push(`/producto/${product.slug}`)
+const viewProduct = (product: ProductoAPIConUYU): void => {
+  router.push(`/product/${product.slug}`)
 }
 
-const cargarCotizacion = async (): Promise<void> => {
-  try {
-    cotizacion.value = await obtenerCotizacion()
-  } catch (error) {
-    console.error('Error al cargar cotización:', error)
-  }
-}
-
+// ✅ Lifecycle simplificado
 onMounted(async () => {
-  await cargarCotizacion()
+  // Cargar productos y cotización
+  await cargarSiEsNecesario()
 
-  if (!productsStore.initialized) {
-    await productsStore.cargarProductos()
-  }
-
-  // Ocultar splash después de 3 segundos
+  // Ocultar splash después de 1.5 segundos
   setTimeout(() => {
     isLoading.value = false
 
-    // Iniciar autoplay después de que el splash desaparezca
+    // Iniciar autoplay
     if (slides.value.length > 0) {
       setTimeout(() => {
         startAutoplay()
       }, 100)
     }
-  }, 1500) // 👈 CAMBIA ESTE NÚMERO para ajustar el tiempo (en milisegundos)
+  }, 1500)
 })
 
 onUnmounted(() => {
