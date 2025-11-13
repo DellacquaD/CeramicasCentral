@@ -210,7 +210,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProducts } from '@/composables/useProducts'
-import type { ProductoAPIConUYU } from '@/stores/products'
+import type { ProductoAPIUYU } from '@/stores/products'
 
 const router = useRouter()
 
@@ -235,12 +235,15 @@ const slides = computed(() => {
   }
 
   // Crear slides de 2 productos
-  const slidesArray: Array<{ left: ProductoAPIConUYU; right: ProductoAPIConUYU }> = []
+  const slidesArray: Array<{ left: ProductoAPIUYU; right: ProductoAPIUYU }> = []
   for (let i = 0; i < productosDestacados.length; i += 2) {
-    if (productosDestacados[i] && productosDestacados[i + 1]) {
+    const left = productosDestacados[i]
+    const right = productosDestacados[i + 1]
+
+    if (left && right) {
       slidesArray.push({
-        left: productosDestacados[i],
-        right: productosDestacados[i + 1]
+        left,
+        right
       })
     }
   }
@@ -253,7 +256,7 @@ const formatearPrecio = (precio: number): string => {
 }
 
 // ✅ Calcular precio anterior en UYU (proporcional)
-const calcularPrecioAnteriorUYU = (product: ProductoAPIConUYU): number => {
+const calcularPrecioAnteriorUYU = (product: ProductoAPIUYU): number => {
   if (!product.precioAnterior) return 0
 
   // Calcular ratio entre precio anterior y precio actual
@@ -264,7 +267,7 @@ const calcularPrecioAnteriorUYU = (product: ProductoAPIConUYU): number => {
 }
 
 // ✅ Calcular descuento basado en precios USD originales
-const calcularDescuento = (product: ProductoAPIConUYU): number => {
+const calcularDescuento = (product: ProductoAPIUYU): number => {
   if (!product.precioAnterior || product.precioAnterior <= 0) return 0
 
   const precioActual = product.precioMetro && product.metrosPorCaja
@@ -310,7 +313,7 @@ const resetAutoplay = (): void => {
   startAutoplay()
 }
 
-const viewProduct = (product: ProductoAPIConUYU): void => {
+const viewProduct = (product: ProductoAPIUYU): void => {
   router.push(`/product/${product.slug}`)
 }
 

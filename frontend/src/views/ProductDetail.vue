@@ -1,269 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ChevronRightIcon, ShoppingCartIcon, MinusIcon, PlusIcon } from '@heroicons/vue/24/outline'
-import { useCartStore } from '../stores/cart'
-import { useProductsStore } from '../stores/products'
-import { useCotizacion } from '../services/cotizacionService'
-import type { ProductoCompleto } from '../stores/products'
-
-const route = useRoute()
-const router = useRouter()
-const cartStore = useCartStore()
-const productsStore = useProductsStore()
-
-const cotizacionUSD = ref<number>(42)
-const cotizacionCargando = ref<boolean>(true)
-const { obtenerCotizacion } = useCotizacion()
-
-const producto = ref<ProductoCompleto | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
-const quantity = ref(1)
-const imagenActualIndex = ref(0)
-const thumbnailStartIndex = ref(0)
-const autoplayInterval = ref<number | null>(null)
-const isAutoplayPaused = ref(false)
-const productosRelacionados = ref<ProductoCompleto[]>([])
-
-const THUMBNAIL_MAX_VISIBLE = 6
-const AUTOPLAY_DELAY = 4000 // 4 segundos
-
-const cargarCotizacion = async (): Promise<void> => {
-  try {
-    cotizacionCargando.value = true
-    const valor = await obtenerCotizacion()
-    cotizacionUSD.value = valor
-    console.log('✅ Cotización cargada en detalle:', valor)
-  } catch (error) {
-    console.error('❌ Error al cargar cotización:', error)
-  } finally {
-    cotizacionCargando.value = false
-  }
-}
-
-const formatearPrecio = (precio: number): string => {
-  return Math.round(precio).toLocaleString('es-UY')
-}
-
-const todasLasImagenes = computed(() => {
-  if (!producto.value) return []
-
-  // Usar las imágenes del producto (ordenadas por display_order e is_primary)
-  return producto.value.images.map(img => img.url).filter(Boolean)
-})
-
-const imagenActual = computed(() => {
-  return todasLasImagenes.value[imagenActualIndex.value] || ''
-})
-
-const thumbnailsVisibles = computed(() => {
-  const start = thumbnailStartIndex.value
-  const end = start + THUMBNAIL_MAX_VISIBLE
-  return todasLasImagenes.value.slice(start, end)
-})
-
-const canScrollThumbnailsLeft = computed(() => {
-  return thumbnailStartIndex.value > 0
-})
-
-const canScrollThumbnailsRight = computed(() => {
-  return thumbnailStartIndex.value + THUMBNAIL_MAX_VISIBLE < todasLasImagenes.value.length
-})
-
-const thumbnailRealIndex = (visibleIndex: number) => {
-  return thumbnailStartIndex.value + visibleIndex
-}
-
-const precioTotal = computed(() => {
-  if (!producto.value || !producto.value.precio_metro || !producto.value.metros_por_caja) return 0
-  return parseInt((producto.value.precio_metro * producto.value.metros_por_caja).toFixed(2))
-})
-
-const precioTotalUYU = computed(() => {
-  return precioTotal.value * cotizacionUSD.value
-})
-
-const precioMetroUYU = computed(() => {
-  if (!producto.value || !producto.value.precio_metro) return 0
-  return producto.value.precio_metro * cotizacionUSD.value
-})
-
-const stockBadgeClass = computed(() => {
-  if (!producto.value || producto.value.stock === null) return 'bg-gray-100 text-gray-800'
-  if (producto.value.stock > 50) return 'bg-green-100 text-green-800'
-  if (producto.value.stock > 10) return 'bg-yellow-100 text-yellow-800'
-  return 'bg-red-100 text-red-800'
-})
-
-const cargarProducto = async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    const slug = route.params.productSlug
-
-    if (!slug) {
-      error.value = 'No se especificó un producto'
-      loading.value = false
-      return
-    }
-
-    console.log('Buscando producto con slug:', slug)
-
-    // Cargar productos si no están cargados
-    if (!productsStore.initialized) {
-      await productsStore.cargarProductos()
-    }
-
-    // Buscar producto por slug (formato completo con todas las relaciones)
-    const found = productsStore.getProductoBySlug(String(slug))
-
-    if (found) {
-      console.log('Producto encontrado:', found.nombre)
-      producto.value = found
-      imagenActualIndex.value = 0
-      thumbnailStartIndex.value = 0
-
-      // Iniciar autoplay si hay múltiples imágenes
-      if (todasLasImagenes.value.length > 1) {
-        startAutoplay()
-      }
-
-      // Cargar productos relacionados
-      if (found.categories.length > 0) {
-        const categoria = found.categories[0]?.slug || ''
-        productosRelacionados.value = productsStore
-            .getProductosByCategoria(categoria)
-            .filter(p => p.id !== found.id)
-            .slice(0, 4)
-      }
-    } else {
-      console.error('Producto no encontrado con slug:', slug)
-      error.value = 'Producto no encontrado'
-    }
-  } catch (err) {
-    console.error('Error al cargar producto:', err)
-    error.value = err instanceof Error ? err.message : 'Error al cargar el producto'
-  } finally {
-    loading.value = false
-  }
-}
-
-const incrementQuantity = () => {
-  if (producto.value && producto.value.stock !== null && quantity.value < producto.value.stock) {
-    quantity.value++
-  }
-}
-
-const decrementQuantity = () => {
-  if (quantity.value > 1) {
-    quantity.value--
-  }
-}
-
-const nextImage = () => {
-  if (imagenActualIndex.value < todasLasImagenes.value.length - 1) {
-    imagenActualIndex.value++
-  } else {
-    imagenActualIndex.value = 0 // Volver al inicio
-  }
-  adjustThumbnailScroll()
-}
-
-const prevImage = () => {
-  if (imagenActualIndex.value > 0) {
-    imagenActualIndex.value--
-  } else {
-    imagenActualIndex.value = todasLasImagenes.value.length - 1 // Ir al final
-  }
-  adjustThumbnailScroll()
-}
-
-const selectThumbnail = (index: number) => {
-  imagenActualIndex.value = index
-  pauseAutoplay()
-}
-
-const scrollThumbnailsLeft = () => {
-  thumbnailStartIndex.value = Math.max(0, thumbnailStartIndex.value - THUMBNAIL_MAX_VISIBLE)
-}
-
-const scrollThumbnailsRight = () => {
-  const maxStart = Math.max(0, todasLasImagenes.value.length - THUMBNAIL_MAX_VISIBLE)
-  thumbnailStartIndex.value = Math.min(maxStart, thumbnailStartIndex.value + THUMBNAIL_MAX_VISIBLE)
-}
-
-const adjustThumbnailScroll = () => {
-  const currentPage = Math.floor(imagenActualIndex.value / THUMBNAIL_MAX_VISIBLE)
-  thumbnailStartIndex.value = currentPage * THUMBNAIL_MAX_VISIBLE
-}
-
-const startAutoplay = () => {
-  if (todasLasImagenes.value.length <= 1) return
-
-  stopAutoplay()
-  isAutoplayPaused.value = false
-
-  autoplayInterval.value = setInterval(() => {
-    nextImage()
-  }, AUTOPLAY_DELAY)
-}
-
-const stopAutoplay = () => {
-  if (autoplayInterval.value) {
-    clearInterval(autoplayInterval.value)
-    autoplayInterval.value = null
-  }
-}
-
-const pauseAutoplay = () => {
-  isAutoplayPaused.value = true
-  stopAutoplay()
-}
-
-const toggleAutoplay = () => {
-  if (isAutoplayPaused.value) {
-    startAutoplay()
-  } else {
-    pauseAutoplay()
-  }
-}
-
-const addToCart = () => {
-  if (producto.value) {
-    // Convertir a formato ProductoAPI para el carrito
-    const productoParaCarrito = productsStore.transformarProducto(producto.value)
-
-    for (let i = 0; i < quantity.value; i++) {
-      cartStore.addItem(productoParaCarrito)
-    }
-    quantity.value = 1
-  }
-}
-
-const goToProduct = (prod: ProductoCompleto) => {
-  router.push(`/producto/${prod.slug}`)
-}
-
-watch(() => route.params.productSlug, () => {
-  if (route.params.productSlug) {
-    cargarProducto()
-    window.scrollTo(0, 0)
-  }
-})
-
-onMounted(async () => {
-  await Promise.all([
-    cargarProducto(),
-    cargarCotizacion()
-  ])
-})
-
-onUnmounted(() => {
-  stopAutoplay()
-})
-</script>
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -296,12 +30,12 @@ onUnmounted(() => {
             </router-link>
           </li>
           <ChevronRightIcon class="w-4 h-4 text-gray-400" />
-          <li v-if="producto.categories[0]">
+          <li v-if="categoriaActual">
             <router-link
-                :to="`/categoria/${producto.categories[0].slug}`"
+                :to="`/categories/${categoriaActual.slug}`"
                 class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
-              {{ producto.categories[0].name }}
+              {{ categoriaActual.name }}
             </router-link>
           </li>
           <ChevronRightIcon class="w-4 h-4 text-gray-400" />
@@ -352,7 +86,7 @@ onUnmounted(() => {
               <span v-if="producto.nuevo" class="bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
                 NUEVO
               </span>
-              <span v-if="producto.en_oferta" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
+              <span v-if="producto.enOferta" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
                 OFERTA
               </span>
               <span v-if="producto.destacado" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
@@ -420,19 +154,14 @@ onUnmounted(() => {
         <!-- Product Info -->
         <div class="space-y-6">
           <!-- Brand -->
-          <div v-if="producto.brand" class="text-sm text-blue-600 dark:text-blue-400 font-semibold">
-            {{ producto.brand.name }}
+          <div v-if="producto.marca" class="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide">
+            {{ producto.marca }}
           </div>
 
           <!-- Title -->
           <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
             {{ producto.nombre }}
           </h1>
-
-          <!-- SKU -->
-          <p class="text-sm text-gray-600 dark:text-gray-400">
-            SKU: {{ producto.sku }}
-          </p>
 
           <!-- Description -->
           <p v-if="producto.descripcion" class="text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -441,12 +170,12 @@ onUnmounted(() => {
 
           <!-- Price -->
           <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
-            <div v-if="producto.precio_anterior && producto.precio_anterior > precioTotal" class="mb-2">
+            <div v-if="descuentoPorcentaje > 0" class="mb-2">
               <span class="text-lg text-gray-500 line-through">
-                ${{ formatearPrecio(producto.precio_anterior * cotizacionUSD) }}
+                ${{ formatearPrecio(precioAnteriorUYU) }}
               </span>
               <span class="ml-2 text-sm bg-red-100 text-red-800 px-2 py-1 rounded-lg font-medium">
-                -{{ Math.round(((producto.precio_anterior - precioTotal) / producto.precio_anterior) * 100) }}%
+                -{{ descuentoPorcentaje }}%
               </span>
             </div>
 
@@ -457,7 +186,7 @@ onUnmounted(() => {
               <span class="text-lg text-gray-600 dark:text-gray-400">por caja</span>
             </div>
 
-            <p v-if="producto.precio_metro" class="text-gray-600 dark:text-gray-400">
+            <p v-if="producto.precioMetro" class="text-gray-600 dark:text-gray-400">
               ${{ formatearPrecio(precioMetroUYU) }} por m²
             </p>
           </div>
@@ -472,21 +201,21 @@ onUnmounted(() => {
                 <dd class="font-medium text-gray-900 dark:text-white">{{ producto.medidas }}</dd>
               </div>
 
-              <div v-if="producto.color">
+              <div v-if="colorConHex">
                 <dt class="text-gray-600 dark:text-gray-400">Color</dt>
                 <dd class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <span
-                      v-if="producto.color.hex_code"
-                      :style="{ backgroundColor: producto.color.hex_code }"
+                      v-if="colorConHex.hex_code"
+                      :style="{ backgroundColor: colorConHex.hex_code }"
                       class="w-4 h-4 rounded-full border border-gray-300"
                   ></span>
-                  {{ producto.color.name }}
+                  {{ colorConHex.name }}
                 </dd>
               </div>
 
-              <div v-if="producto.material">
+              <div v-if="materialCompleto">
                 <dt class="text-gray-600 dark:text-gray-400">Material</dt>
-                <dd class="font-medium text-gray-900 dark:text-white">{{ producto.material.name }}</dd>
+                <dd class="font-medium text-gray-900 dark:text-white">{{ materialCompleto.name }}</dd>
               </div>
 
               <div v-if="producto.pei">
@@ -494,9 +223,9 @@ onUnmounted(() => {
                 <dd class="font-medium text-gray-900 dark:text-white">{{ producto.pei }}</dd>
               </div>
 
-              <div v-if="producto.metros_por_caja">
+              <div v-if="producto.metrosPorCaja">
                 <dt class="text-gray-600 dark:text-gray-400">M² por caja</dt>
-                <dd class="font-medium text-gray-900 dark:text-white">{{ producto.metros_por_caja }}</dd>
+                <dd class="font-medium text-gray-900 dark:text-white">{{ producto.metrosPorCaja }}</dd>
               </div>
 
               <div v-if="producto.unidad">
@@ -509,10 +238,13 @@ onUnmounted(() => {
           <!-- Stock -->
           <div>
             <span :class="['inline-flex items-center px-3 py-1 rounded-full text-sm font-medium', stockBadgeClass]">
-              Stock
-              <span v-if="producto.stock !== null" class="ml-2">
-                ({{ producto.stock }} {{ producto.unidad || 'unidades' }})
-              </span>
+              <template v-if="producto.stock !== null">
+                {{ producto.stock > 0 ? 'En stock' : 'Sin stock' }}
+                <span class="ml-2">({{ producto.stock }} {{ producto.unidad || 'unidades' }})</span>
+              </template>
+              <template v-else>
+                Disponible
+              </template>
             </span>
           </div>
 
@@ -547,9 +279,9 @@ onUnmounted(() => {
           </div>
 
           <!-- Tags -->
-          <div v-if="producto.tags.length > 0" class="flex flex-wrap gap-2">
+          <div v-if="tagsCompletos.length > 0" class="flex flex-wrap gap-2">
             <span
-                v-for="tag in producto.tags"
+                v-for="tag in tagsCompletos"
                 :key="tag.id"
                 class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-lg text-sm"
             >
@@ -573,8 +305,8 @@ onUnmounted(() => {
           >
             <div class="relative aspect-square bg-gray-100 dark:bg-gray-700">
               <img
-                  v-if="prod.images[0]"
-                  :src="prod.images[0].url"
+                  v-if="prod.imagenPrincipal"
+                  :src="prod.imagenPrincipal"
                   :alt="prod.nombre"
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
@@ -583,14 +315,14 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="p-4">
-              <p v-if="prod.brand" class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1">
-                {{ prod.brand.name }}
+              <p v-if="prod.marca" class="text-xs text-blue-600 dark:text-blue-400 font-semibold mb-1 uppercase">
+                {{ prod.marca }}
               </p>
               <h3 class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
                 {{ prod.nombre }}
               </h3>
-              <p v-if="prod.precio_metro" class="text-lg font-bold text-gray-900 dark:text-white">
-                ${{ formatearPrecio((prod.precio_metro * (prod.metros_por_caja || 1)) * cotizacionUSD) }}
+              <p class="text-lg font-bold text-gray-900 dark:text-white">
+                ${{ formatearPrecio(prod.precioPorCajaUYU) }}
               </p>
             </div>
           </div>
@@ -599,6 +331,247 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ChevronRightIcon, ShoppingCartIcon, MinusIcon, PlusIcon } from '@heroicons/vue/24/outline'
+import { useCartStore } from '../stores/cart'
+import { useProducto } from '../composables/useProducts'
+import { useProductsStore } from '../stores/products'
+import type { ProductoAPIUYU } from '../stores/products'
+
+const route = useRoute()
+const router = useRouter()
+const cartStore = useCartStore()
+const store = useProductsStore()
+
+// Usar el composable para producto individual
+const slug = computed(() => String(route.params.productSlug || ''))
+const { producto: productoCompleto, productoFormateado, loading, error, cargarSiEsNecesario } = useProducto(slug)
+
+const quantity = ref(1)
+const imagenActualIndex = ref(0)
+const thumbnailStartIndex = ref(0)
+const autoplayInterval = ref<number | null>(null)
+const isAutoplayPaused = ref(false)
+
+const THUMBNAIL_MAX_VISIBLE = 6
+const AUTOPLAY_DELAY = 4000
+
+const formatearPrecio = (precio: number): string => {
+  return Math.round(precio).toLocaleString('es-UY')
+}
+
+// Producto con precios en UYU (para mostrar info general)
+const producto = computed((): ProductoAPIUYU | undefined => {
+  return productoFormateado.value
+})
+
+// Imágenes desde productoCompleto (tiene la estructura completa de la BD)
+const todasLasImagenes = computed(() => {
+  if (!productoCompleto.value) return []
+  return productoCompleto.value.images.map(img => img.url).filter(Boolean)
+})
+
+const imagenActual = computed(() => {
+  return todasLasImagenes.value[imagenActualIndex.value] || ''
+})
+
+const thumbnailsVisibles = computed(() => {
+  const start = thumbnailStartIndex.value
+  const end = start + THUMBNAIL_MAX_VISIBLE
+  return todasLasImagenes.value.slice(start, end)
+})
+
+const canScrollThumbnailsLeft = computed(() => {
+  return thumbnailStartIndex.value > 0
+})
+
+const canScrollThumbnailsRight = computed(() => {
+  return thumbnailStartIndex.value + THUMBNAIL_MAX_VISIBLE < todasLasImagenes.value.length
+})
+
+const thumbnailRealIndex = (visibleIndex: number) => {
+  return thumbnailStartIndex.value + visibleIndex
+}
+
+// Precios ya calculados en UYU
+const precioTotalUYU = computed(() => {
+  return producto.value?.precioPorCajaUYU || 0
+})
+
+const precioMetroUYU = computed(() => {
+  return producto.value?.precioMetroUYU || 0
+})
+
+const precioAnteriorUYU = computed(() => {
+  if (!producto.value?.precioAnterior) return 0
+  const ratio = producto.value.precioAnterior / producto.value.precio
+  return producto.value.precioPorCajaUYU * ratio
+})
+
+const descuentoPorcentaje = computed(() => {
+  if (!producto.value?.precioAnterior || producto.value.precioAnterior <= producto.value.precio) return 0
+  return Math.round(((producto.value.precioAnterior - producto.value.precio) / producto.value.precioAnterior) * 100)
+})
+
+const stockBadgeClass = computed(() => {
+  if (!producto.value || producto.value.stock === null) return 'bg-gray-100 text-gray-800'
+  if (producto.value.stock > 50) return 'bg-green-100 text-green-800'
+  if (producto.value.stock > 10) return 'bg-yellow-100 text-yellow-800'
+  return 'bg-red-100 text-red-800'
+})
+
+// Productos relacionados con precios en UYU
+const productosRelacionados = computed((): ProductoAPIUYU[] => {
+  if (!productoCompleto.value || productoCompleto.value.categories.length === 0) return []
+
+  const categoria = productoCompleto.value.categories[0]
+  if (!categoria) return []
+
+  return store.getProductosByCategoriaConUYU(categoria.slug)
+      .filter(p => p.id !== producto.value?.id)
+      .slice(0, 4)
+})
+
+// Información adicional desde productoCompleto
+const categoriaActual = computed(() => {
+  return productoCompleto.value?.categories[0] || null
+})
+
+const colorConHex = computed(() => {
+  return productoCompleto.value?.color
+})
+
+const materialCompleto = computed(() => {
+  return productoCompleto.value?.material
+})
+
+const tagsCompletos = computed(() => {
+  return productoCompleto.value?.tags || []
+})
+
+const incrementQuantity = () => {
+  if (producto.value && producto.value.stock !== null && quantity.value < producto.value.stock) {
+    quantity.value++
+  } else if (producto.value && producto.value.stock === null) {
+    quantity.value++
+  }
+}
+
+const decrementQuantity = () => {
+  if (quantity.value > 1) {
+    quantity.value--
+  }
+}
+
+const nextImage = () => {
+  if (imagenActualIndex.value < todasLasImagenes.value.length - 1) {
+    imagenActualIndex.value++
+  } else {
+    imagenActualIndex.value = 0
+  }
+  adjustThumbnailScroll()
+}
+
+const prevImage = () => {
+  if (imagenActualIndex.value > 0) {
+    imagenActualIndex.value--
+  } else {
+    imagenActualIndex.value = todasLasImagenes.value.length - 1
+  }
+  adjustThumbnailScroll()
+}
+
+const selectThumbnail = (index: number) => {
+  imagenActualIndex.value = index
+  pauseAutoplay()
+}
+
+const scrollThumbnailsLeft = () => {
+  thumbnailStartIndex.value = Math.max(0, thumbnailStartIndex.value - THUMBNAIL_MAX_VISIBLE)
+}
+
+const scrollThumbnailsRight = () => {
+  const maxStart = Math.max(0, todasLasImagenes.value.length - THUMBNAIL_MAX_VISIBLE)
+  thumbnailStartIndex.value = Math.min(maxStart, thumbnailStartIndex.value + THUMBNAIL_MAX_VISIBLE)
+}
+
+const adjustThumbnailScroll = () => {
+  const currentPage = Math.floor(imagenActualIndex.value / THUMBNAIL_MAX_VISIBLE)
+  thumbnailStartIndex.value = currentPage * THUMBNAIL_MAX_VISIBLE
+}
+
+const startAutoplay = () => {
+  if (todasLasImagenes.value.length <= 1) return
+
+  stopAutoplay()
+  isAutoplayPaused.value = false
+
+  autoplayInterval.value = setInterval(() => {
+    nextImage()
+  }, AUTOPLAY_DELAY)
+}
+
+const stopAutoplay = () => {
+  if (autoplayInterval.value) {
+    clearInterval(autoplayInterval.value)
+    autoplayInterval.value = null
+  }
+}
+
+const pauseAutoplay = () => {
+  isAutoplayPaused.value = true
+  stopAutoplay()
+}
+
+const toggleAutoplay = () => {
+  if (isAutoplayPaused.value) {
+    startAutoplay()
+  } else {
+    pauseAutoplay()
+  }
+}
+
+const addToCart = () => {
+  if (producto.value) {
+    for (let i = 0; i < quantity.value; i++) {
+      cartStore.addItem(producto.value)
+    }
+    quantity.value = 1
+  }
+}
+
+const goToProduct = (prod: ProductoAPIUYU) => {
+  router.push(`/product/${prod.slug}`)
+}
+
+watch(() => route.params.productSlug, () => {
+  if (route.params.productSlug) {
+    imagenActualIndex.value = 0
+    thumbnailStartIndex.value = 0
+    quantity.value = 1
+    window.scrollTo(0, 0)
+
+    if (todasLasImagenes.value.length > 1) {
+      startAutoplay()
+    }
+  }
+})
+
+onMounted(async () => {
+  await cargarSiEsNecesario()
+
+  if (todasLasImagenes.value.length > 1) {
+    startAutoplay()
+  }
+})
+
+onUnmounted(() => {
+  stopAutoplay()
+})
+</script>
 
 <style scoped>
 .line-clamp-2 {

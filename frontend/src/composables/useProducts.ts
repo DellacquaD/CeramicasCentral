@@ -38,25 +38,28 @@ export function useProducts() {
  */
 export function useProducto(slug: ComputedRef<string> | string) {
     const store = useProductsStore()
-    // const slugValue = typeof slug === 'string' ? slug : slug.value
 
     const producto = computed(() =>
         store.getProductoBySlug(typeof slug === 'string' ? slug : slug.value)
     )
 
-    const productoFormateado = computed(() =>
-        producto.value ? store.transformarProducto(producto.value) : undefined
-    )
+    const productoFormateado = computed(() => {
+        const slugValue = typeof slug === 'string' ? slug : slug.value
+        return store.getProductoBySlugConUYU(slugValue)
+    })
 
     const cargarSiEsNecesario = async () => {
         if (!store.initialized) {
-            await store.cargarProductos()
+            await Promise.all([
+                store.cargarProductos(),
+                store.cargarCotizacion()
+            ])
         }
     }
 
     return {
-        producto,
-        productoFormateado,
+        producto, // ProductoCompleto (formato BD)
+        productoFormateado, // ProductoAPIConUYU (con precios en UYU)
         loading: computed(() => store.loading),
         error: computed(() => store.error),
         cargarSiEsNecesario

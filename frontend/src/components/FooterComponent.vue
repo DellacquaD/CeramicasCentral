@@ -141,28 +141,12 @@
 
     <!-- Bottom bar -->
     <div class="bg-gray-800 border-t border-gray-700">
-      <div class="max-w-7xl mx-auto px-8 py-6">
-        <div class="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
-          <div class="flex items-center space-x-6">
-            <p class="text-gray-400">
-              © 2024 Products. Todos los derechos reservados.
-            </p>
-            <span class="text-gray-600">|</span>
-            <span class="text-gray-400 text-sm">RUT: 12.345.678-0001</span>
-          </div>
-
-          <div class="flex space-x-6">
-            <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">
-              Términos y Condiciones
-            </a>
-            <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">
-              Política de Privacidad
-            </a>
-            <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">
-              Devoluciones
-            </a>
-          </div>
-        </div>
+      <div class="max-w-7xl mx-auto px-8 py-6 flex justify-center items-center space-x-6">
+          <p class="text-gray-400">
+            © 2025 mnq-tech. Todos los derechos reservados.
+          </p>
+          <span class="text-gray-600">|</span>
+          <span class="text-gray-400 text-sm">www.mnq-tech.com</span>
       </div>
     </div>
   </footer>
