@@ -16,17 +16,6 @@
           <p class="text-xl font-semibold">Error al cargar productos</p>
           <p class="text-gray-600 dark:text-gray-400 mt-2">{{ error }}</p>
         </div>
-<!--        <button -->
-<!--            @click="cargar"-->
-<!--            class="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-200"-->
-<!--        >-->
-<!--          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">-->
-<!--            <path stroke-lin
-
-ecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>-->
-<!--          </svg>-->
-<!--          <span>Reintentar</span>-->
-<!--        </button>-->
       </div>
 
       <!-- Content -->
@@ -79,7 +68,6 @@ ecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.
             <option value="name">Ordenar por nombre</option>
             <option value="price-low">Precio menor a mayor</option>
             <option value="price-high">Precio mayor a menor</option>
-            <option value="stock">Mayor stock</option>
           </select>
         </div>
 
@@ -116,12 +104,6 @@ ecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.
               <div class="absolute top-2 left-2 flex flex-col gap-1">
                 <span v-if="product.nuevo" class="bg-green-500 text-white px-2 py-1 rounded-md text-xs font-bold">NUEVO</span>
                 <span v-if="product.enOferta" class="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">OFERTA</span>
-              </div>
-
-              <div v-if="product.stock !== null" class="absolute bottom-2 right-2">
-                <span :class="['px-2 py-1 rounded-md text-xs font-semibold', product.stock > 50 ? 'bg-green-100 text-green-800' : product.stock > 10 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800']">
-                  Stock: {{ parseInt(product.stock.toFixed(2)) }} {{ product.unidad || 'u' }}
-                </span>
               </div>
             </div>
 
@@ -326,9 +308,6 @@ const productosFiltrados = computed((): ProductoAPIUYU[] => {
     case 'price-high':
       result = [...result].sort((a, b) => b.precioPorCajaUYU - a.precioPorCajaUYU)
       break
-    case 'stock':
-      result = [...result].sort((a, b) => (b.stock || 0) - (a.stock || 0))
-      break
     default:
       result = [...result].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
   }
@@ -409,8 +388,6 @@ watch(searchTerm, () => {
 onMounted(async () => {
   // Cargar productos si es necesario
   await cargarSiEsNecesario()
-
-
 })
 </script>
 

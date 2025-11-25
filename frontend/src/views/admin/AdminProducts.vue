@@ -88,9 +88,6 @@
               Precio
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-              Stock
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
               Estado
             </th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -114,9 +111,6 @@
                   <div class="text-sm font-medium text-gray-900 dark:text-white">
                     {{ product.name }}
                   </div>
-<!--                  <div class="text-sm text-gray-500 dark:text-gray-400">-->
-<!--                    {{ getBrandName(product.brand_id) }}-->
-<!--                  </div>-->
                 </div>
               </div>
             </td>
@@ -127,21 +121,6 @@
               <div class="text-sm font-medium text-gray-900 dark:text-white">
                 ${{ product.price?.toLocaleString() }}
               </div>
-              <div v-if="product.compare_price" class="text-xs text-gray-500 dark:text-gray-400 line-through">
-                ${{ product.compare_price?.toLocaleString() }}
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="[
-                  'px-2 py-1 rounded-full text-xs font-medium',
-                  product.stock > product.low_stock_threshold
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                    : product.stock > 0
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                ]">
-                  {{ product.stock }} unidades
-                </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex gap-1">
@@ -262,86 +241,29 @@
               </div>
             </div>
 
-            <!-- Precios -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Precio *
-                </label>
-                <input
-                    v-model.number="form.price"
-                    type="number"
-                    step="0.01"
-                    required
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="0.00"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Precio comparación
-                </label>
-                <input
-                    v-model.number="form.compare_price"
-                    type="number"
-                    step="0.01"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="0.00"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Costo
-                </label>
-                <input
-                    v-model.number="form.cost"
-                    type="number"
-                    step="0.01"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="0.00"
-                >
-              </div>
-            </div>
-
-            <!-- Stock -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Stock *
-                </label>
-                <input
-                    v-model.number="form.stock"
-                    type="number"
-                    required
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="0"
-                >
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Umbral de stock bajo
-                </label>
-                <input
-                    v-model.number="form.low_stock_threshold"
-                    type="number"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    placeholder="5"
-                >
-              </div>
+            <!-- Precio -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Precio *
+              </label>
+              <input
+                  v-model.number="form.price"
+                  type="number"
+                  step="0.01"
+                  required
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="0.00"
+              >
             </div>
 
             <!-- Marca, Color, Material -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Marca *
+                  Marca
                 </label>
                 <select
                     v-model="form.brand_id"
-                    required
                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Seleccionar marca</option>
@@ -477,20 +399,6 @@
               </div>
             </div>
 
-            <!-- Peso (opcional) -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Peso (kg)
-              </label>
-              <input
-                  v-model.number="form.weight"
-                  type="number"
-                  step="0.01"
-                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="0.00"
-              >
-            </div>
-
             <!-- Checkboxes de estado -->
             <div class="space-y-3">
               <div class="flex items-center">
@@ -595,17 +503,12 @@ interface Product {
   name: string
   slug: string
   price: number
-  compare_price: number | null
-  cost: number | null
-  stock: number
-  low_stock_threshold: number
-  brand_id: string
+  brand_id: string | null
   color_id: string | null
   material_id: string | null
-  activo: boolean  // en español en la BD
-  disponible: boolean  // en español en la BD
+  activo: boolean
+  disponible: boolean
   is_featured: boolean
-  weight: number | null
   images?: Array<{ url: string; display_order: number }>
   categories?: Array<{ category_id: string }>
 }
@@ -667,10 +570,6 @@ const form = ref({
   name: '',
   sku: '',
   price: 0,
-  compare_price: null as number | null,
-  cost: null as number | null,
-  stock: 0,
-  low_stock_threshold: 5,
   brand_id: '',
   color_id: null as string | null,
   material_id: null as string | null,
@@ -678,7 +577,6 @@ const form = ref({
   subcategory_ids: [] as string[],
   tag_ids: [] as string[],
   images: [''] as string[],
-  weight: null as number | null,
   activo: true,
   disponible: true,
   is_featured: false
@@ -794,10 +692,6 @@ const openCreateModal = () => {
     name: '',
     sku: '',
     price: 0,
-    compare_price: null,
-    cost: null,
-    stock: 0,
-    low_stock_threshold: 5,
     brand_id: '',
     color_id: null,
     material_id: null,
@@ -805,7 +699,6 @@ const openCreateModal = () => {
     subcategory_ids: [],
     tag_ids: [],
     images: [''],
-    weight: null,
     activo: true,
     disponible: true,
     is_featured: false
@@ -828,18 +721,13 @@ const openEditModal = async (product: Product) => {
     name: product.name,
     sku: product.sku,
     price: product.price,
-    compare_price: product.compare_price,
-    cost: product.cost,
-    stock: product.stock,
-    low_stock_threshold: product.low_stock_threshold,
-    brand_id: product.brand_id,
+    brand_id: product.brand_id || '',
     color_id: product.color_id,
     material_id: product.material_id,
     category_ids: categoriesRes.data?.map((c: any) => c.category_id) || [],
     subcategory_ids: subcategoriesRes.data?.map((s: any) => s.subcategory_id) || [],
     tag_ids: tagsRes.data?.map((t: any) => t.tag_id) || [],
     images: product.images?.map(img => img.url) || [''],
-    weight: product.weight,
     activo: product.activo,
     disponible: product.disponible,
     is_featured: product.is_featured
@@ -879,17 +767,12 @@ const saveProduct = async () => {
 
     const productData = {
       sku: form.value.sku,
-      nombre: form.value.name,
+      name: form.value.name,
       slug: slug,
-      precio: form.value.price,
-      compare_price: form.value.compare_price,
-      cost: form.value.cost,
-      stock: form.value.stock,
-      low_stock_threshold: form.value.low_stock_threshold,
-      brand_id: form.value.brand_id,
+      price: form.value.price,
+      brand_id: form.value.brand_id || null,
       color_id: form.value.color_id || null,
       material_id: form.value.material_id || null,
-      weight: form.value.weight,
       activo: form.value.activo,
       disponible: form.value.disponible,
       is_featured: form.value.is_featured
@@ -924,7 +807,7 @@ const saveProduct = async () => {
       // Crear producto
       const { data, error } = await supabase
           .from('products')
-          .insert([productData])
+          .insert(productData as any)
           .select()
           .single()
 
