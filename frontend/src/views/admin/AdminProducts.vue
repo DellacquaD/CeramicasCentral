@@ -893,10 +893,21 @@ const executeDelete = async () => {
   if (!productToDelete.value) return
 
   try {
+    const productId = productToDelete.value.id
+
+    // PRIMERO: Eliminar todas las relaciones
+    await Promise.all([
+      supabase.from('product_images').delete().eq('product_id', productId),
+      supabase.from('product_categories').delete().eq('product_id', productId),
+      supabase.from('product_subcategories').delete().eq('product_id', productId),
+      supabase.from('product_tags').delete().eq('product_id', productId)
+    ])
+
+    // DESPUÉS: Eliminar el producto
     const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', productToDelete.value.id)
+        .eq('id', productId)
 
     if (error) throw error
 

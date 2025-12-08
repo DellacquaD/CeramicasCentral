@@ -20,12 +20,21 @@ import AdminColors from '@/views/admin/AdminColors.vue'
 import AdminMaterials from '@/views/admin/AdminMaterials.vue'
 import AdminTags from '@/views/admin/AdminTags.vue'
 import Home from "@/views/Home.vue";
+import UnderConstruction from "@/views/UnderConstruction.vue";
 
 const routes: RouteRecordRaw[] = [
+    // {
+    //     path: '/',
+    //     name: 'Home',
+    //     component: Home,
+    //     meta: {
+    //         title: 'Inicio - CerámicasCentral'
+    //     }
+    // },
     {
         path: '/',
-        name: 'Home',
-        component: Home,
+        name: 'UnderConstruction',
+        component: UnderConstruction,
         meta: {
             title: 'Inicio - CerámicasCentral'
         }
